@@ -29,10 +29,10 @@ def plan_trajectory_points(points,  joint_angles, num_steps):
         poses.append(pose)
     return plan_trajectory(poses, joint_angles, num_steps)
 
-def show_traj(traj):
+def show_traj(traj, loop=False):
     import roboticstoolbox as rtb
     robot_show = rtb.models.UR5()  # Create UR5 robot model
-    robot_show.plot(traj, backend='pyplot',loop=True)
+    robot_show.plot(traj, backend='pyplot',loop=loop)
 
 def forward_joints(joints_traj):
     from ur_ikfast import ur_kinematics

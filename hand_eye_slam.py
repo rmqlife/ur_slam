@@ -16,6 +16,10 @@ class HandEyeSlam:
         self.R, self.t = icp(robot_poses[:, :3], slam_poses[:, :3])
         new_poses = transform_poses(self.R, self.t, slam_poses)
         self.R_q = relative_rotation(new_poses[0,3:], robot_poses[0,3:])
+
+        # Compute the inverse translation vector
+        self.R_inv = np.linalg.inv(self.R)
+        self.t_inv = -np.dot(self.R_inv, self.t)
         pass
 
     def slam_to_robot(self, poses, verbose=False):
@@ -25,11 +29,19 @@ class HandEyeSlam:
         rotated_poses = transform_poses(R=self.R_q, t=[0,0,0], poses=transformed_poses)
         rotated_poses[:,:3] = transformed_poses[:, :3]
         if verbose:
+            visualize_poses(poses, 'slam poses')
+            visualize_poses(transformed_poses, 'transformed')
+            visualize_poses(rotated_poses, 'rotated')
+            plt.show()
+        return rotated_poses
+    
+    def robot_to_slam(self, poses, verbose=False):
+        transformed_poses = transform_poses(self.R_inv, self.t_inv, poses) 
+        if verbose:
             visualize_poses(poses)
             visualize_poses(transformed_poses)
-            visualize_poses(rotated_poses)
-        return rotated_poses
-
+            plt.show()
+        return transformed_poses
 
 
 import pickle
@@ -54,12 +66,10 @@ if __name__ == "__main__":
     print(robot_poses.shape)
 
     hand_eye_slam = HandEyeSlam(slam_poses=slam_poses, robot_poses=robot_poses)
-    new_poses = hand_eye_slam.slam_to_robot(slam_poses)
+    new_poses = hand_eye_slam.slam_to_robot(slam_poses, verbose=False)
     print("overall projected error", poses_error(robot_poses, new_poses))
 
-    visualize_poses(robot_poses,'robot poses')
-    visualize_poses(slam_poses,'slam poses')
-    visualize_poses(new_poses, 'projected slam poses')
-    plt.show()
+    new_poses = hand_eye_slam.robot_to_slam(robot_poses, verbose=False) 
+    print("overall projected error", poses_error(slam_poses, new_poses))
 
     save_object(hand_eye_slam,'handeyeslam_data.pkl')

@@ -1,16 +1,15 @@
 import numpy as np
 import math
 
-def rectangle_points(center):
-    points = [center]
-    for i in [-0.1, 0.1]:
-        for j in [-0.1, 0.1]:
-            point = center.copy()
-            point[0]+=i
-            point[1]+=j
-            points.append(point)
-    # connect start to end
-    points.append(points[0])
+def rectangle_points(center, x, y):
+    points = []
+    for i, j in [(-x,-y), (-x, y), (x,y), (x, -y),(-x,-y)]:
+        point = center.copy()
+        point[0]+=i
+        point[1]+=j
+        points.append(point)
+    
+    # connect start to end    
     return np.array(points)
 
 
@@ -39,7 +38,6 @@ def circle_points(center, radius=0.1, num_points=20):
 
 
 def circle_pose(center, toward,  radius, num_points):
-    from circle import circle_points
     points = circle_points(center, radius=radius, num_points=num_points)
     import math
     pi = math.pi
