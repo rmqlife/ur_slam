@@ -13,13 +13,21 @@ class HandEyeSlam:
         self.estimate(slam_poses, robot_poses)
 
     def estimate(self, slam_poses, robot_poses):
+        assert(slam_poses.shape[1]>=3)
+        assert(slam_poses.shape==robot_poses)
+        
         self.R, self.t = icp(robot_poses[:, :3], slam_poses[:, :3])
         new_poses = transform_poses(self.R, self.t, slam_poses)
-        self.R_q = relative_rotation(new_poses[0,3:], robot_poses[0,3:])
+        if slam_poses.shape[1]==3:
+            self.R_q = np.eye(3)
+        else:
+            self.R_q = relative_rotation(new_poses[0,3:], robot_poses[0,3:])
 
         # Compute the inverse translation vector
         self.R_inv = np.linalg.inv(self.R)
         self.t_inv = -np.dot(self.R_inv, self.t)
+
+        self.R_q_inv = np.linalg.inv(self.R_q)
         pass
 
     def slam_to_robot(self, poses, verbose=False):
@@ -43,6 +51,7 @@ class HandEyeSlam:
             plt.show()
         return transformed_poses
 
+    
 
 import pickle
 def save_object(obj, file_path):
