@@ -10,7 +10,7 @@ def rectangle_points(center, x, y):
         points.append(point)
     
     # connect start to end    
-    return np.array(points)
+    return points
 
 
 def vec_to_quat(v1, v2):
@@ -40,7 +40,6 @@ def circle_points(center, radius=0.1, num_points=20):
 def circle_pose(center, toward,  radius, num_points):
     points = circle_points(center, radius=radius, num_points=num_points)
     import math
-    pi = math.pi
     for i in range(len(points)):
         quat = vec_to_quat([0,0,1],  toward-points[i])
         points[i] =  list(points[i][:3]) + list(quat)
