@@ -69,6 +69,22 @@ def R_dot_quat(R, quat):
     quat = Rotation.from_matrix(quat_mat).as_quat()
     return quat
 
+
+def inverse_Rt(R, t):
+    R_inv = np.linalg.inv(R)
+    t_inv = -np.dot(R_inv,t)
+    return R_inv, t_inv
+
+def pose_to_Rt(pose):
+    R = quat_to_R(pose[3:])
+    t = pose[:3]
+    return R, t
+
+def Rt_to_pose(R, t):
+    pose = list(t) + list(R_to_quat(R))
+    return np.array(pose)
+
+
 def relative_rotation(q1, q2):
     # q1 to q2
     # Convert quaternions to rotation objects
