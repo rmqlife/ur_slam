@@ -4,7 +4,7 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 import os
-
+from utils.pose_util import *
 
 def replace_path(file_path, src, dst):
     directory, filename = os.path.split(file_path)  
@@ -54,11 +54,6 @@ def load_intrinsics(json_file):
     return intrinsic_params
 
 
-def plot_matching(image0, image1, pts0, pts1):
-    axes = viz2d.plot_images([image0, image1])
-    viz2d.plot_matches(pts0, pts1, color="lime", lw=0.2)
-
-
 def filter_out_zeros_points(pt3d1, pt3d2, threshold=1e-4):
     new_pt3d1 = list()
     new_pt3d2 = list()
@@ -80,7 +75,7 @@ def print_array(array):
 class MyGlue:
     def __init__(self, match_type):
         self.match_type=match_type
-        if self.match_type is "LightGlue":
+        if self.match_type == "LightGlue":
             # import sys
             # sys.path.insert(0,'/home/rmqlife/work/LightGlue')
             from lightglue import LightGlue, SuperPoint, DISK
@@ -92,14 +87,14 @@ class MyGlue:
             self.matcher = LightGlue(features="superpoint", filter_threshold=0.9).eval().to(self.device)
 
 
-    def match(self, image0, image1):
+    def match(self, image0, image1, verbose=True):
         if self.match_type=="LightGlue":
-            return self.match_with_lightglue(image0, image1)
+            return self.match_with_lightglue(image0, image1, verbose)
         if self.match_type=="Aruco":
-            return self.match_with_aruco(image0, image1)
+            return self.match_with_aruco(image0, image1, verbose)
         return None, None
     
-    def match_with_lightglue(self, image0, image1):
+    def match_with_lightglue(self, image0, image1, verbose):
         from lightglue.utils import numpy_image_to_torch, rbd
         image0 = numpy_image_to_torch(image0)
         image1 = numpy_image_to_torch(image1)
@@ -119,36 +114,69 @@ class MyGlue:
 
         return m_kpts0, m_kpts1
 
-    def match_with_aruco(self, image0, image1):
-        from aruco_util import detect_aruco
-        pts0 = detect_aruco(image0)
-        pts1 = detect_aruco(image1)
+    def match_with_aruco(self, image0, image1, verbose):
+        from utils.aruco_util import detect_aruco
+        corners0, ids0 = detect_aruco(image0, verbose)
+        corners1, ids1 = detect_aruco(image1, verbose)
+        assert len(ids0)==1
+        assert len(ids1)==1
+        print('match with aruco', (ids0, ids1))
+        # print(corners0[0][0].shape)
+        pts0 = corners0[0][0]
+        pts1 = corners1[0][0]
         return pts0, pts1
 
-    def match_3d(self, image0, image1, depth0, depth1, intrinsics):
-        pts0, pts1 = self.match(image0, image1)
+    def match_3d(self, pts0, pts1, depth0, depth1, intrinsics, show=False):
         pt3d0 = project_to_3d(pts0, depth0, intrinsics, show=False)
         pt3d1 = project_to_3d(pts1, depth1, intrinsics, show=False)
 
-        new_pt3d0, new_pt3d1 = filter_out_zeros_points(pt3d0, pt3d1)
+        pt3d0, pt3d1 = filter_out_zeros_points(pt3d0, pt3d1)
+        pt3d0 = np.array(pt3d0)
+        pt3d1 = np.array(pt3d1)
 
-        from pose_util import find_transformation, icp
-        R, t = icp(new_pt3d0, new_pt3d1)
+        R, t = find_transformation(pt3d0, pt3d1)
+        
+        pt3d1_star = transform_poses(R, t, pt3d0)
+        err = poses_error(pt3d1_star, pt3d1)
+        print('match 3d error', err)
+        if show:
+            ax = visualize_poses(pt3d0, label="0", color='r',ax=None)
+            ax = visualize_poses(pt3d1, label="1", color='b',ax=ax)
+            # ax = visualize_poses(pt3d1_star, label="2", color='g',ax=ax)
+            # plt.show()
         return R, t
 
+def draw_matches_on_image(img, pts0, pts1):
+    # Convert image to RGB (assuming it is in BGR format)
+    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+    # Create a copy of the image to draw lines on
+    img_with_lines = img_rgb.copy()
+
+    # Draw lines between matching points
+    for pt0, pt1 in zip(pts0, pts1):
+        # Convert points to tuple of integers
+        pt0 = tuple(map(int, pt0))
+        pt1 = tuple(map(int, pt1))
+
+        # Draw line between corresponding points
+        cv2.line(img_with_lines, pt0, pt1, (0, 255, 0), 2)  # Green line with thickness 2
+
+    return img_with_lines
+
 if __name__=="__main__":
+    # os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH")
     # glue = MyGlue("LightGlue")
     glue = MyGlue("Aruco")
-    id1=8
-    id2=14
+    id1=9
+    id2=66
 
-    image_path1 = f"0612-facedown/rgb_{id1}.png"
-    image_path2 = f"0612-facedown/rgb_{id2}.png"
+    image_path1 = f"data/0612-facedown/rgb_{id1}.png"
+    image_path2 = f"data/0612-facedown/rgb_{id2}.png"
     rgb1 = cv2.imread(image_path1)
     rgb2 = cv2.imread(image_path2)
 
-    pts0, pts1 = glue.match(rgb1, rgb2)
-    print(pts0, pts1)
+    pts0, pts1 = glue.match(rgb1, rgb2,verbose=True)
 
 
     depth_path1 = replace_rgb_to_depth(image_path1)
@@ -156,7 +184,10 @@ if __name__=="__main__":
     depth1 = cv2.imread(depth_path1, cv2.IMREAD_UNCHANGED)
     depth2 = cv2.imread(depth_path2, cv2.IMREAD_UNCHANGED)
 
-    intrinsics = load_intrinsics("intrinsic_parameters.json")
-    R, t = glue.match_3d(rgb1, rgb2, depth1, depth2, intrinsics)
+    intrinsics = load_intrinsics("slam_data/intrinsics_d435.json")
+    R, t = glue.match_3d(pts0, pts1, depth1, depth2, intrinsics, show=True)
     print(R, t)
 
+    img = draw_matches_on_image(rgb1, pts0, pts1)
+    cv2.imshow('ts',img)
+    cv2.waitKey(0)

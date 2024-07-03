@@ -1,6 +1,8 @@
 import numpy as np
 import math
 
+unit_vector = [1,0,0]
+
 def rectangle_points(center, x, y):
     points = []
     for i, j in [(-x,-y), (-x, y), (x,y), (x, -y),(-x,-y)]:
@@ -41,7 +43,7 @@ def circle_pose(center, toward,  radius, num_points):
     points = circle_points(center, radius=radius, num_points=num_points)
     import math
     for i in range(len(points)):
-        quat = vec_to_quat([0,0,1],  toward-points[i])
+        quat = vec_to_quat(unit_vector,  toward-points[i])
         points[i] =  list(points[i][:3]) + list(quat)
 
     return np.array(points)

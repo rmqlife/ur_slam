@@ -1,6 +1,6 @@
 import rospy
 import numpy as np
-from myRTABMap import RTABMapPoseListener
+from ros_utils.myRTABMap import RTABMapPoseListener
 
 rospy.init_node('ur5_shake_test', anonymous=True)
 

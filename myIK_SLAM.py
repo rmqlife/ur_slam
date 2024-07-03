@@ -1,5 +1,5 @@
-from pose_zoo import circle_pose, rectangle_points, circle_points
-from pose_util import visualize_poses
+from utils.pose_zoo import circle_pose, rectangle_points, circle_points
+from utils.pose_util import visualize_poses
 import os
 from hand_eye_slam import HandEyeSlam, load_object, poses_error
 from myIK import MyIK
@@ -16,10 +16,10 @@ def validate_joints(joints):
 
 
 class MyIK_SLAM(MyIK):
-    def __init__(self, slam_path, use_ikfast=True):
+    def __init__(self, slam_path, use_ikfast=False):
         print(os.getcwd())
         self.slam = HandEyeSlam()
-        self.slam.load()
+        self.slam.load(slam_path)
         super().__init__(use_ikfast)
 
 
@@ -32,8 +32,6 @@ class MyIK_SLAM(MyIK):
         robot_poses = super().forward_joints(joints_traj)
         # print('robot_poses', robot_poses)
         return self.slam.robot_to_slam(robot_poses)
-
-
 
 def dry_run(ik_slam, init_joints, target_poses):
     init_pose = ik_slam.forward_joints(init_joints)
@@ -50,20 +48,41 @@ def dry_run(ik_slam, init_joints, target_poses):
 
     ik_slam.show_traj(traj, loop=False)
     return traj
-         
+
+def init_real_robot():
+    import sys
+    sys.path.insert(0,'/home/rmqlife/work/catkin_ur5/src/teleop/src')
+    from myRobot import MyRobot
+    import rospy
+    rospy.init_node('ur5_slam', anonymous=True)
+    robot=MyRobot()
+    return robot
+
+def configs_to_traj(config_path, vel_threshold):
+    from myConfig import MyConfig
+    joint_configs = MyConfig(config_path)
+    # print(joint_configs.config_dict)
+    joints = []
+    for k in ['p1','p2','p3','p1']:
+        j = joint_configs.get(k)
+        print(j)
+        joints.append(j)
+
+    myIK = MyIK()
+    poses = myIK.forward_joints(joints)
+    print(poses)
+    # plan poses
+    traj = myIK.plan_trajectory(poses, joints[0], vel_threshold=vel_threshold)
+    return traj
+
+
+
 if __name__=="__main__":
-    real = False
-    ik_slam = MyIK_SLAM(slam_path='./hand_eye_slam.npz', use_ikfast=True)
+    real = True
 
     if real:
-        import sys
-        sys.path.insert(0,'/home/rmqlife/work/catkin_ur5/src/teleop/src')
-        from myRobot import MyRobot
-        import rospy
-        rospy.init_node('ur5_slam', anonymous=True)
-        robot=MyRobot()
+        robot = init_real_robot()
         init_joints = robot.get_joints()
-        
     else:
         # dry run with saved data
         joints_traj = np.load('slam_data/traj.npy')
@@ -74,13 +93,13 @@ if __name__=="__main__":
     if not validate_joints(init_joints):
         exit()
 
+    ik_slam = MyIK_SLAM(slam_path='slam_data/hand_eye_slam.npz', use_ikfast=True)
     init_pose = ik_slam.forward_joints(init_joints)
 
     # circle = circle_pose(center=init_pose[:3], toward=init_pose[:3]+np.array([0,0,-0.3]), radius=0.1, num_points=10)
-    circle = circle_points(center=init_pose[:3], radius=0.1, num_points=20)
-    # rect =  rectangle_points(center=init_pose[:3], x=0.2, y=0.1)
+    # circle = circle_points(center=init_pose[:3], radius=0.1, num_points=20)
+    target =  rectangle_points(center=init_pose[:3], x=0.2, y=0.1)
 
-    target = circle.copy()
     target.append(target[0])
     target.append(init_pose[:3])
     print(target)
@@ -88,7 +107,7 @@ if __name__=="__main__":
 
     if real:
         duration=0.2
-        from myImageSaver import MyImageSaver
+        from ros_utils.myImageSaver import MyImageSaver
         image_saver = MyImageSaver()
 
         np.save(os.path.join(image_saver.folder_path,  'traj'), traj)
@@ -98,3 +117,4 @@ if __name__=="__main__":
             robot.move_joints(joints, duration, wait=True)
             image_saver.record()  # Save images
     
+        

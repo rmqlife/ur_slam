@@ -3,6 +3,9 @@ import math
 from scipy.spatial.transform import Rotation
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from spatialmath import SE3
+
+unit_vector = [1,0,0]
 
 def normalize_vector(vector, l):
     # Calculate the length of the vector
@@ -16,7 +19,6 @@ def visualize_poses(poses, label="None", color='b', ax=None, autoscale=False):
         ax = plt.axes(projection ='3d')
         # Plot SLAM poses
         ax.set_autoscale_on(autoscale)
-
 
     poses = np.array(poses)
     if len(poses.shape)<2:
@@ -32,8 +34,8 @@ def visualize_poses(poses, label="None", color='b', ax=None, autoscale=False):
         # Plot orientation vectors
         for i in range(len(p)):
             # Convert quaternion to rotation matrix
-            R = Rotation.from_quat(q[i]).as_matrix()
-            d = np.dot(R, [0,0,1])
+            R = quat_to_R(q[i])
+            d = np.dot(R, unit_vector)
             d = normalize_vector(d, l=0.2)
             ax.quiver(p[i, 0], p[i, 1], p[i, 2], 
                     d[0], d[1], d[2], 
@@ -45,6 +47,21 @@ def visualize_poses(poses, label="None", color='b', ax=None, autoscale=False):
     ax.set_title("Poses with Quaternion")
     plt.legend()
     return ax
+
+def SE3_to_pose(Rt):
+    return list(Rt.t) + list(R_to_quat(Rt.R))
+
+def pose_to_SE3(pose):
+    t = SE3()
+    t.R[:] = quat_to_R(pose[3:])
+    t.t = pose[:3]
+    return t
+
+def R_to_quat(R):
+    return Rotation.from_matrix(R).as_quat()
+
+def quat_to_R(R):
+    return  Rotation.from_quat(R).as_matrix()
 
 def R_dot_quat(R, quat):
     quat_mat = Rotation.from_quat(quat).as_matrix()
@@ -62,7 +79,7 @@ def relative_rotation(q1, q2):
     relative_rotation = rot2 * rot1.inv()
     return relative_rotation.as_matrix()
 
-def transform_pose(pose, R, t):
+def transform_pose(R, t, pose):
     pose_star = pose.copy()
     pose_star[:3] = np.dot(R, pose[:3])+t
     if len(pose)>3:
@@ -72,16 +89,14 @@ def transform_pose(pose, R, t):
 
 def transform_poses(R, t, poses):
     # single vector
+    poses = np.array(poses)
     if len(poses.shape)<2:
-        poses = np.array([poses])
+        return transform_pose(R, t, pose)
     transformed_poses = []
     for pose in poses:
-        transformed_pose = transform_pose(pose, R, t)
+        transformed_pose = transform_pose(R, t, pose)
         transformed_poses.append(transformed_pose)
     transformed_poses = np.vstack(transformed_poses)
-    # single vector 
-    if transformed_poses.shape[0]==1:
-        transformed_poses = transformed_poses[0]
     return transformed_poses
 
 def icp(poses1, poses2, max_iter=10, threshold=1e-5):
@@ -146,3 +161,13 @@ def find_transformation(X, Y):
     # Determine translation vector
     t = cY - np.dot(R, cX)
     return R, t
+
+def vec2mat(vec):
+    if len(vec.shape)<2:
+        vec = np.array([vec])   
+    return vec
+
+def poses_error(poses1, poses2):
+    poses1 = vec2mat(poses1)
+    poses2 = vec2mat(poses2)
+    return np.mean(np.linalg.norm(poses1[:, :3] - poses2[:, :3], axis=1))

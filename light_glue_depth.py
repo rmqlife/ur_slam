@@ -1,7 +1,7 @@
 
 import cv2
 import numpy as np
-from lightglue_util import MyGlue, replace_rgb_to_depth, load_intrinsics, print_array
+from utils.lightglue_util import MyGlue, replace_rgb_to_depth, load_intrinsics, print_array
 import matplotlib.pyplot as plt
 
 def plot_matching(image0, image1, pts0, pts1):
