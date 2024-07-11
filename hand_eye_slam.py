@@ -29,7 +29,7 @@ class HandEyeSlam:
         self.t_c2g = data['t_c2g']
         self.R_g2c, self.t_g2c = inverse_Rt(self.R_c2g, self.t_c2g)
 
-    def hand_in_eye(self, poses_c2t, poses_g2b):
+    def eye_in_hand(self, poses_c2t, poses_g2b):
         # target to camera, T_t2c -> inverse(slam_poses)
         t_t2c = []
         R_t2c = []
@@ -57,20 +57,9 @@ class HandEyeSlam:
         self.R_c2g = R_c2g
         self.t_c2g = t_c2g
 
-        # translate gripper pose to target
-        # validate if t2b is fixed:
-        poses = []
-        for i in range(len(R_g2b)):
-            R_g2b_i, t_g2b_i = R_g2b[i], t_g2b[i]
-            R_t2c_i, t_t2c_i = R_t2c[i], t_t2c[i]
-            
-            R_c2b_i, t_c2b_i = Rt_dot(self.R_c2g, self.t_c2g, R_g2b_i, t_g2b_i)
-            p = Rt_to_pose(R_c2b_i, t_c2b_i)
-            R_t2b_i, t_t2b_i = Rt_dot(R_t2c_i, t_t2c_i, R_c2b_i, t_c2b_i)
-            print(i, t_t2b_i)
-            poses.append(p)
-        
-        visualize_poses(poses)
+        # visualize_poses(poses)
+
+
     def slam_to_robot(self, poses, verbose=False):
         slam_poses = np.array(poses)
         # transform the point
@@ -117,9 +106,28 @@ def validate_model():
     hand_eye_slam = HandEyeSlam()
     hand_eye_slam.load(f'data/0613-slam-aruco/hand_eye_slam_0703-1619.npz')
 
-    new_poses = hand_eye_slam.slam_to_robot(slam_poses, verbose=1)
-    print("overall projected error", poses_error(robot_poses, new_poses))
+    R_c2g, t_c2g = hand_eye_slam.R_c2g, hand_eye_slam.t_c2g
 
+    # new_poses = hand_eye_slam.slam_to_robot(slam_poses, verbose=1)
+    # print("overall projected error", poses_error(robot_poses, new_poses))
+
+    # translate gripper pose to target
+    # validate if t2b is fixed:
+    poses = []
+    for i in range(len(robot_poses)):
+        R_g2b, t_g2b = pose_to_Rt(robot_poses[i])  
+        R_c2t, t_c2t = pose_to_Rt(slam_poses[i])
+        R_t2c, t_t2c = inverse_Rt(R_c2t, t_c2t)
+
+        R_c2b, t_c2b = Rt_dot(R_c2g, t_c2g, R_g2b, t_g2b)
+        pose_c2b = Rt_to_pose(R_c2b, t_c2b)
+        R_t2b_i, t_t2b_i = Rt_dot(R_t2c, t_t2c, R_c2b, t_c2b)
+        print(i, t_t2b_i)
+        poses.append(pose_c2b)
+
+    ax = visualize_poses(poses, color='r',ax=None)
+    visualize_poses(robot_poses, color='b', ax=ax)
+    plt.show()
     # new_poses = hand_eye_slam.robot_to_slam(robot_poses, verbose=1) 
     # print("overall projected error", poses_error(slam_poses, new_poses))
     pass
@@ -135,10 +143,10 @@ def compute_model():
     ik = MyIK(False)
     robot_poses = ik.forward_joints(joints_traj)
     hand_eye_slam = HandEyeSlam()
-    hand_eye_slam.hand_in_eye(poses_c2t=slam_poses, poses_g2b=robot_poses)
+    hand_eye_slam.eye_in_hand(poses_c2t=slam_poses, poses_g2b=robot_poses)
     hand_eye_slam.save(f'{folder}/hand_eye_slam_{time.strftime("%m%d-%H%M")}.npz')
 
 if __name__ == "__main__":
-    # validate_model()
-    compute_model()
+    validate_model()
+    # compute_model()
     pass

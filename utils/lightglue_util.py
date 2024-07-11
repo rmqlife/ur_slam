@@ -4,7 +4,7 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 import os
-from utils.pose_util import *
+from pose_util import *
 
 def replace_path(file_path, src, dst):
     directory, filename = os.path.split(file_path)  
