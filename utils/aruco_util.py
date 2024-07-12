@@ -2,8 +2,8 @@ import cv2
 import cv2.aruco as aruco
 import numpy as np
 import click
-from pose_util import *
-from lightglue_util import load_intrinsics
+from utils.pose_util import *
+from utils.lightglue_util import load_intrinsics
 import json
 
 ARUCO_DICT_NAME = aruco.DICT_4X4_50
@@ -15,11 +15,15 @@ def detect_aruco(image, draw_flag=False):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     detector = aruco.ArucoDetector(my_aruco_dict, aruco.DetectorParameters())
     corners, ids, rejectedImgPoints = detector.detectMarkers(gray)
-    # Draw detected markers on the image
-    if draw_flag and ids is not None:
-        image = aruco.drawDetectedMarkers(image, corners, ids)
-    corners = [c[0] for c in corners]
-    ids = [c[0] for c in ids]
+
+    if corners is  None or ids is None:
+        return corners, ids
+    else:
+        # Draw detected markers on the image
+        if draw_flag and ids is not None:
+            image = aruco.drawDetectedMarkers(image, corners, ids)
+        corners = [c[0] for c in corners]
+        ids = [c[0] for c in ids]
     return corners, ids
 
 
@@ -39,8 +43,8 @@ def estimate_markers_poses(corners, marker_size, intrinsics):
     marker_size - is the size of the detected markers
     mtx - is the camera matrix
     distortion - is the camera distortion matrix
-    RETURN list of rvecs, tvecs, and trash (so that it corresponds to the old estimatePoseSingleMarkers())
     '''
+    # make sure the aruco's orientation in the camera view! 
     marker_points = np.array([[-marker_size / 2, marker_size / 2, 0],
                               [marker_size / 2, marker_size / 2, 0],
                               [marker_size / 2, -marker_size / 2, 0],
@@ -93,50 +97,7 @@ def main_gen_aruco():
         output_file = f'arucos/aruco_marker_{marker_id}.png'  # Output file name
         generate_aruco_marker(marker_id, marker_size, output_file)
 
-
-# Example usage
-def main_detect_video():
-    # Load camera calibration parameters (fx, fy, cx2, cy, distortion coefficients)
-    fx, fy, cx, cy = 1000.0, 1000.0, 320.0, 240.0  # Example values (replace with actual calibration)
-    cap = cv2.VideoCapture("arucos.webm")  # Change to your camera index or video file path
-    intrinsics = load_intrinsics("slam_data/intrinsics_d435.json")
-    framedelay=1000//30
-    framedelay=1
-    poses_traj = dict()
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            break
-        # Estimate camera pose using ArUco markers
-        corners, ids = detect_aruco(frame, draw_flag=True)# 
-        # print([corners[0].shape, ids[0]])
-        poses = estimate_markers_poses(corners, marker_size=0.03, intrinsics=intrinsics)  # Marker size in meters
-
-        cv2.imshow('Camera', frame)
-        # Exit on 'q' key press
-        if cv2.waitKey(framedelay) & 0xFF == ord('q'):
-            break
-        
-        for k, iden in enumerate(ids):
-            iden = str(iden)
-            if iden in poses_traj:
-                poses_traj[iden].append(list(poses[k]))
-            else:
-                poses_traj[iden] = []
-
-    
-    with open("poses_traj.json", "w") as json_file:
-        json.dump(poses_traj, json_file, indent=4)
-    # Release video capture and close all windows
-    cap.release()
-    cv2.destroyAllWindows()
-
-
-
-
 if __name__ == "__main__":
     # main()
-    # main_gen_aruco()
-
-    #main_detect_video()
-    show_poses_traj()
+    main_gen_aruco()
+    
