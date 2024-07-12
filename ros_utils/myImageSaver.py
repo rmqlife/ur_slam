@@ -53,6 +53,7 @@ if __name__ == '__main__':
         rospy.init_node('image_saver')
         import time
         image_saver = MyImageSaver()
+        time.sleep(1)
         # Example usage: Save RGB and depth images
         while not rospy.is_shutdown():
             image_saver.record()  # Save images
