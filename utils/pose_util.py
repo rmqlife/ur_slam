@@ -63,26 +63,29 @@ def R_to_quat(R):
 def quat_to_R(R):
     return  Rotation.from_quat(R).as_matrix()
 
+
+def pose_to_Rt(pose):
+    R = quat_to_R(pose[3:])
+    t = np.array(pose[:3])
+    return R, t
+
+def Rt_to_pose(R, t):
+    pose = list(t) + list(R_to_quat(R))
+    return np.array(pose)
+
 def R_dot_quat(R, quat):
     quat_mat = Rotation.from_quat(quat).as_matrix()
     quat_mat = np.dot(R, quat_mat)
     quat = Rotation.from_matrix(quat_mat).as_quat()
     return quat
 
-
 def inverse_Rt(R, t):
-    R_inv = np.linalg.inv(R)
-    t_inv = -np.dot(R_inv,t)
-    return R_inv, t_inv
+    return R.T, -R.T @ t
 
-def pose_to_Rt(pose):
-    R = quat_to_R(pose[3:])
-    t = pose[:3]
-    return R, t
-
-def Rt_to_pose(R, t):
-    pose = list(t) + list(R_to_quat(R))
-    return np.array(pose)
+def inverse_pose(pose):
+    R, t = pose_to_Rt(pose)
+    R_star, t_star = inverse_Rt(R, t)
+    return Rt_to_pose(R_star, t_star)
 
 
 def relative_rotation(q1, q2):

@@ -46,7 +46,7 @@ if __name__=="__main__":
                 init_pose = current_pose
             else:
                 # compute the R, t
-                init_cam, current_cam = reverse_poses([init_pose, current_pose])
+                init_cam, current_cam = inverse_poses([init_pose, current_pose])
                 # compute 
                 cam_delta = pose_delta(current_cam, init_cam)
                 print('cam', np.round(cam_delta[:3], 3))

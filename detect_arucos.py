@@ -40,7 +40,7 @@ def capture_poses(src_path, dst_path, intrinsics_path="slam_data/intrinsics_d435
 
 if __name__=="__main__":
     src_path="data/up_forward_cam.webm"
-    src_path=0
+    # src_path=0
     if src_path!=0:
         dst_path = src_path.replace('webm','json')
     else:

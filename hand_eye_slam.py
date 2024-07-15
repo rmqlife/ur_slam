@@ -104,12 +104,9 @@ def validate_model():
 
     # test 
     hand_eye_slam = HandEyeSlam()
-    hand_eye_slam.load(f'data/0613-slam-aruco/hand_eye_slam_0703-1619.npz')
+    hand_eye_slam.load(f'data/0613-slam-aruco/hand_eye_slam_0715-1649.npz')
 
     R_c2g, t_c2g = hand_eye_slam.R_c2g, hand_eye_slam.t_c2g
-
-    # new_poses = hand_eye_slam.slam_to_robot(slam_poses, verbose=1)
-    # print("overall projected error", poses_error(robot_poses, new_poses))
 
     # translate gripper pose to target
     # validate if t2b is fixed:
@@ -119,11 +116,12 @@ def validate_model():
         R_c2t, t_c2t = pose_to_Rt(slam_poses[i])
         R_t2c, t_t2c = inverse_Rt(R_c2t, t_c2t)
 
-        R_c2b, t_c2b = Rt_dot(R_c2g, t_c2g, R_g2b, t_g2b)
+        R_c2b, t_c2b = Rt_dot(np.eye(3), t_c2g, R_g2b, t_g2b)
         pose_c2b = Rt_to_pose(R_c2b, t_c2b)
+        poses.append(pose_c2b)
+
         R_t2b_i, t_t2b_i = Rt_dot(R_t2c, t_t2c, R_c2b, t_c2b)
         print(i, t_t2b_i)
-        poses.append(pose_c2b)
 
     ax = visualize_poses(poses, color='r',ax=None)
     visualize_poses(robot_poses, color='b', ax=ax)
