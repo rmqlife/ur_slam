@@ -130,9 +130,6 @@ def validate_model():
     # print("overall projected error", poses_error(slam_poses, new_poses))
     pass
 
-
-
-
 def compute_model():
     folder = 'data/0613-slam-aruco'
     joints_traj = np.load(f'{folder}/traj.npy')

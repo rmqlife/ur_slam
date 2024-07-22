@@ -53,6 +53,9 @@ class MyIK:
             joints = self.robot_plan.ikine_LM(Rt, q0=q).q
         return joints
 
+    def ik_se3(self, se3, q):
+        return self.robot_plan.ikine_LM(se3, q0=q).q
+    
     def forward_joints(self, joints_traj):
         joints_traj = np.array(joints_traj)
         if len(joints_traj.shape) < 2:

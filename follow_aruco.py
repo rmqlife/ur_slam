@@ -3,6 +3,8 @@ from ros_utils.myImageSaver import MyImageSaver
 import rospy
 import cv2
 from replay_aruco_poses import *
+from std_msgs.msg import Float32
+import os
 
 def get_aruco_poses(corners, ids, intrinsics):
     # make sure the aruco's orientation in the camera view! 
@@ -16,39 +18,39 @@ def get_aruco_poses(corners, ids, intrinsics):
 
     return poses_dict
 
+def get_cam_pose(frame, intrinsics):
+    corners, ids = detect_aruco(frame, draw_flag=True)# 
+    poses_dict = get_aruco_poses(corners=corners, ids=ids, intrinsics=intrinsics)
+    id = 0
+    current_cam = None
+    if id in poses_dict:
+        current_pose = poses_dict[id]
+            # compute the R, t
+        current_cam = inverse_pose(current_pose)
+            # compute 
+        print('cam', np.round(current_cam[:3], 3))
+    return current_cam
 
 if __name__=="__main__":
-    rospy.init_node('image_saver')
-
+    rospy.init_node('follow_aruco')
     image_saver = MyImageSaver()
+    rospy.sleep(1)
     framedelay = 1000//20
 
-    instrinsics = load_intrinsics("slam_data/intrinsics_d435.json")
+    intrinsics = load_intrinsics("slam_data/intrinsics_d435.json")
 
-    init_pose = None
-    #image_saver.record()  # Save images
+
     while not rospy.is_shutdown():
         
         frame = image_saver.rgb_image
-        corners, ids = detect_aruco(frame, draw_flag=True)# 
-
+        cam_pose = get_cam_pose(frame, intrinsics)
+        print(cam_pose)
         cv2.imshow('Camera', frame)
         # Exit on 'q' key press
-        if cv2.waitKey(framedelay) & 0xFF == ord('q'):
+        key = cv2.waitKey(framedelay) & 0xFF 
+        if key == ord('q'):
             break
-        
-        poses_dict = get_aruco_poses(corners=corners, ids=ids, intrinsics=instrinsics)
-
-        id = 0
-        if id in poses_dict:
-            current_pose = poses_dict[id]
-            if init_pose is None:
-                init_pose = current_pose
-            else:
-                # compute the R, t
-                init_cam, current_cam = inverse_poses([init_pose, current_pose])
-                # compute 
-                cam_delta = pose_delta(current_cam, init_cam)
-                print('cam', np.round(cam_delta[:3], 3))
+        if key == ord('s'):
+            image_saver.record()
 
     cv2.destroyAllWindows()

@@ -58,8 +58,8 @@ def inverse_poses(poses):
 
 
 def pose_delta(pose0, pose1):
-    R0, t0 = pose_to_Rt(pose0[3:])
-    R1, t1 = pose_to_Rt(pose1[3:])
+    R0, t0 = pose_to_Rt(pose0)
+    R1, t1 = pose_to_Rt(pose1)
     R_diff =  R0 @ R1.T # equal to np.dot(R0, R1.T) but R0 * R1  is elementwise multiply
     t_diff =  np.array(t0) - R_diff @ np.array(t1)
     return Rt_to_pose(R_diff, t_diff)
