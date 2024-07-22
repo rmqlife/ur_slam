@@ -3,9 +3,9 @@ import os
 import numpy as np
 from myIK_SLAM import init_real_robot
 from myIK import MyIK
-from pose_util import *
-from myImageSaver import MyImageSaver
-from myRTABMap import RTABMapPoseListener
+from utils.pose_util import *
+from ros_utils.myImageSaver import MyImageSaver
+from ros_utils.myRTABMap import RTABMapPoseListener
 
 
 def configs_to_traj(config_path, vel_threshold):

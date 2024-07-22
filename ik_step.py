@@ -70,7 +70,7 @@ def lookup_action(code, t_move=0.03, r_move=5):
     return None
 
 
-def act_by_code(robot, action_code):
+def act_by_code(robot, action_code, wait):
 
     joints = robot.get_joints()
     myIK = MyIK(use_ikfast=False)
@@ -85,15 +85,18 @@ def act_by_code(robot, action_code):
     else:
         # keep the trans
         t =  pose_se3.t
+        # tcp_move = SE3.Ry(45, unit='deg') * tcp_move
         pose_se3 = tcp_move * pose_se3
         pose_se3.t = t
+
+
     print("pose_se3", pose_se3)
     joints_star = myIK.ik_se3(pose_se3, q=joints)
     # compute the difference between joints and joints_star
     joints_movement = np.max(np.abs(joints - joints_star))
     print("joints movement {joints_movement}")
-    robot.move_joints(joints_star, duration=5*joints_movement, wait=False)
-
+    robot.move_joints(joints_star, duration=5*joints_movement, wait=wait)
+    return joints_star, SE3_to_pose(pose_se3)
 
 if __name__ == "__main__":
     rospy.init_node('ik_step', anonymous=True)
