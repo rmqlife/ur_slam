@@ -30,25 +30,27 @@ if __name__ == "__main__":
     while not rospy.is_shutdown():
         frame = image_saver.rgb_image
         cam_pose = get_cam_pose(frame, intrinsics)
-        if cam_pose is not None:
-            print(cam_pose)
         cv2.imshow('Camera', frame)
         key = cv2.waitKey(framedelay) & 0xFF 
         if key == ord('q'):
             break
         if key == ord('s'):
             image_saver.record()
-        elif key in key_map:
-            code  = key_map[key]
-            print(f"action {code}")
-            joints, robot_pose = act_by_code(robot, action_code=code, wait=True)
-            
-            
-            slam_pose = slam_pose_listener.get_pose()
+
+            #slam_pose = slam_pose_listener.get_pose()
+            slam_pose = cam_pose
             image_saver.record()  # Save images
             slam_poses.append(slam_pose)
             robot_poses.append(robot_pose)
-            print(f"robot pose {robot_pose}, slam_pose {slam_pose}")
+            print('robot pose', np.round(robot_pose[:3], 3))
+            print("cam pose", np.round(cam_pose[:3], 3))            
+        elif key in key_map:
+            code  = key_map[key]
+            print(f"action {code}")
+            robot_pose = step(robot, action=lookup_action(code), wait=True)
+            
+            
+
         # save data
     ik = MyIK()
     robot_poses = np.array(robot_poses)

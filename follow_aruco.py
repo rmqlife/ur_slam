@@ -28,7 +28,7 @@ def get_cam_pose(frame, intrinsics):
             # compute the R, t
         current_cam = inverse_pose(current_pose)
             # compute 
-        print('cam', np.round(current_cam[:3], 3))
+        # print('cam', np.round(current_cam[:3], 3))
     return current_cam
 
 if __name__=="__main__":

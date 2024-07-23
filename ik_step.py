@@ -70,31 +70,38 @@ def lookup_action(code, t_move=0.03, r_move=5):
     return None
 
 
-def act_by_code(robot, action_code, wait):
+def step(robot, action, wait):
 
     joints = robot.get_joints()
     myIK = MyIK(use_ikfast=False)
     pose = myIK.fk(joints)
     pose_se3 = pose_to_SE3(pose)
-    tcp_move = lookup_action(action_code)
 
     base_transform = SE3.Rx(-135, unit='deg')
-    tcp_move_new = base_transform * tcp_move * base_transform.inv()
-    print("tcp_move transformed")
-    tcp_move_new.printline()
 
-    pose_se3_new  = tcp_move_new * pose_se3
     # rotation keep the x, y, z
-    if abs(action_code)>3:
+    action = base_transform * action * base_transform.inv()
+    print('action print'), action.printline()
+    
+    pose_se3_new = action * pose_se3
+    if np.linalg.norm(action.t)<0.001:
         pose_se3_new.t = pose_se3.t
     
     # move
     joints_star = myIK.ik_se3(pose_se3_new, q=joints)
     # compute the difference between joints and joints_star
     joints_movement = np.max(np.abs(joints - joints_star))
-    print("joints movement {joints_movement}")
-    robot.move_joints(joints_star, duration=5*joints_movement, wait=wait)
-    return joints_star, SE3_to_pose(pose_se3_new)
+    print(f"joints movement {joints_movement}")
+    
+    
+    if joints_movement>0.5:
+        print('something wrong with IK in step()')
+        return None
+    else:
+        robot.move_joints(joints_star, duration=5*joints_movement, wait=wait)
+        
+        # pose_se3_new.printline()
+    return SE3_to_pose(base_transform * pose_se3_new)
 
 if __name__ == "__main__":
     rospy.init_node('ik_step', anonymous=True)
@@ -108,8 +115,6 @@ if __name__ == "__main__":
 
         frame = image_saver.rgb_image
         cam_pose = get_cam_pose(frame, intrinsics)
-        if cam_pose is not None:
-            print(cam_pose)
         cv2.imshow('Camera', frame)
         key = cv2.waitKey(framedelay) & 0xFF 
         if key == ord('q'):
@@ -119,8 +124,10 @@ if __name__ == "__main__":
         elif key in key_map:
             code  = key_map[key]
             print(f"action {code}")
-            act_by_code(robot, action_code=code, wait=False)
-
+            action = lookup_action(code)
+            pose = step(robot, action=action, wait=False)
+            print('robot pose', np.round(pose[:3], 3))
+            print("cam pose", np.round(cam_pose[:3], 3))
         # i += 1
         # # build action
         # # test actions
