@@ -78,25 +78,23 @@ def act_by_code(robot, action_code, wait):
     pose_se3 = pose_to_SE3(pose)
     tcp_move = lookup_action(action_code)
 
-    # tcp_move = SE3.Rx(135, unit='deg') * tcp_move
+    base_transform = SE3.Rx(-135, unit='deg')
+    tcp_move_new = base_transform * tcp_move * base_transform.inv()
+    print("tcp_move transformed")
+    tcp_move_new.printline()
 
-    if abs(action_code)<=3:
-        pose_se3 = tcp_move * pose_se3
-    else:
-        # keep the trans
-        t =  pose_se3.t
-        # tcp_move = SE3.Ry(45, unit='deg') * tcp_move
-        pose_se3 = tcp_move * pose_se3
-        pose_se3.t = t
-
-
-    print("pose_se3", pose_se3)
-    joints_star = myIK.ik_se3(pose_se3, q=joints)
+    pose_se3_new  = tcp_move_new * pose_se3
+    # rotation keep the x, y, z
+    if abs(action_code)>3:
+        pose_se3_new.t = pose_se3.t
+    
+    # move
+    joints_star = myIK.ik_se3(pose_se3_new, q=joints)
     # compute the difference between joints and joints_star
     joints_movement = np.max(np.abs(joints - joints_star))
     print("joints movement {joints_movement}")
     robot.move_joints(joints_star, duration=5*joints_movement, wait=wait)
-    return joints_star, SE3_to_pose(pose_se3)
+    return joints_star, SE3_to_pose(pose_se3_new)
 
 if __name__ == "__main__":
     rospy.init_node('ik_step', anonymous=True)
@@ -110,7 +108,8 @@ if __name__ == "__main__":
 
         frame = image_saver.rgb_image
         cam_pose = get_cam_pose(frame, intrinsics)
-        print(cam_pose)
+        if cam_pose is not None:
+            print(cam_pose)
         cv2.imshow('Camera', frame)
         key = cv2.waitKey(framedelay) & 0xFF 
         if key == ord('q'):
@@ -120,7 +119,7 @@ if __name__ == "__main__":
         elif key in key_map:
             code  = key_map[key]
             print(f"action {code}")
-            act_by_code(robot, action_code=code)
+            act_by_code(robot, action_code=code, wait=False)
 
         # i += 1
         # # build action

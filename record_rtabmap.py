@@ -20,11 +20,7 @@ if __name__ == "__main__":
     image_saver = MyImageSaver()
     intrinsics = load_intrinsics("slam_data/intrinsics_d435.json")
     framedelay = 1000//20
-
-    i = 0
-
     slam_pose_listener = RTABMapPoseListener(verbose=False)
-    image_saver = MyImageSaver()
     home = image_saver.folder_path
 
     # collect data
