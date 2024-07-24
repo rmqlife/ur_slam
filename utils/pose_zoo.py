@@ -14,6 +14,9 @@ def rectangle_points(center, x, y):
     # connect start to end    
     return points
 
+def swap_quat(q):
+    # xyzw to wxyz
+    return [q[3], q[0], q[1], q[2]]
 
 def vec_to_quat(v1, v2):
     import tf.transformations as transformations
@@ -21,8 +24,9 @@ def vec_to_quat(v1, v2):
     v1 = v1 / np.linalg.norm(v1)
     v2 = v2 / np.linalg.norm(v2)
     # Compute the quaternion representing the rotation from v1 to v2
-    quaternion = transformations.quaternion_about_axis(np.arccos(np.dot(v1, v2)), np.cross(v1, v2))
-    return quaternion
+    q = transformations.quaternion_about_axis(np.arccos(np.dot(v1, v2)), np.cross(v1, v2))
+    # q = swap_quat(q)
+    return q
 
 
 def circle_points(center, radius=0.1, num_points=20):
@@ -41,9 +45,17 @@ def circle_points(center, radius=0.1, num_points=20):
 
 def circle_pose(center, toward,  radius, num_points):
     points = circle_points(center, radius=radius, num_points=num_points)
-    import math
     for i in range(len(points)):
         quat = vec_to_quat(unit_vector,  toward-points[i])
         points[i] =  list(points[i][:3]) + list(quat)
 
     return np.array(points)
+
+
+if __name__=="__main__":
+    init_pose = (0, 0, 0)
+    target_pose = (0, 0, -0.5)
+    points = circle_pose(init_pose, target_pose, radius=0.3, num_points=50)
+    from pose_util import *
+    visualize_poses(points, label="points to plan", color='y', autoscale=False, ax=None)
+    plt.show()  

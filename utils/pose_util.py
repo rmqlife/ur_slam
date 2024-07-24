@@ -35,12 +35,11 @@ def visualize_poses(poses, label="None", color='b', ax=None, autoscale=False):
         # Plot orientation vectors
         for i in range(len(p)):
             # Convert quaternion to rotation matrix
-            R = quat_to_R(q[i])
-            d = np.dot(R, unit_vector)
+            d = quat_to_R(q[i]) @ unit_vector
             d = normalize_vector(d, l=0.2)
             ax.quiver(p[i, 0], p[i, 1], p[i, 2], 
-                    d[0], d[1], d[2], 
-                    length=0.1, normalize=True, color='r')
+                      d[0], d[1], d[2], 
+                      length=0.1, normalize=True, color='r')
 
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
@@ -59,12 +58,12 @@ def pose_to_SE3(pose):
     return t
 
 def R_to_quat(R):
-    return tq.mat2quat(R)
-    # return Rotation.from_matrix(R).as_quat()
+    # return tq.mat2quat(R)
+    return Rotation.from_matrix(R).as_quat()
 
 def quat_to_R(q):
-    return tq.quat2mat(q)
-    # return  Rotation.from_quat(R).as_matrix()
+    # return tq.quat2mat(q)
+    return  Rotation.from_quat(q).as_matrix()
 
 
 def pose_to_Rt(pose):
@@ -75,13 +74,6 @@ def pose_to_Rt(pose):
 def Rt_to_pose(R, t):
     pose = list(t) + list(R_to_quat(R))
     return np.array(pose)
-
-def R_dot_quat(R, quat):
-    quat_mat = quat_to_R(quat)
-    # quat_mat = Rotation.from_quat(quat).as_matrix()
-    quat_mat = np.dot(R, quat_mat)
-    quat = R_to_quat(quat_mat)
-    return quat
 
 def inverse_Rt(R, t):
     return R.T, -R.T @ t
@@ -95,8 +87,7 @@ def inverse_pose(pose):
 def relative_rotation(q1, q2):
     # q1 to q2
     # Convert quaternions to rotation objects
-    # rot1 = Rotation.from_quat(q1)
-    # rot2 = Rotation.from_quat(q2)
+
     rot1 = quat_to_R(q1)
     rot2 = quat_to_R(q2)
 
@@ -108,7 +99,7 @@ def transform_pose(R, t, pose):
     pose_star = pose.copy()
     pose_star[:3] = np.dot(R, pose[:3])+t
     if len(pose)>3:
-        pose_star[3:] =  R_dot_quat(R, pose[3:])
+        pose_star[3:] =  R_to_quat(R @ quat_to_R(pose[3:]))
     return pose_star
  
 
@@ -196,3 +187,12 @@ def poses_error(poses1, poses2):
     poses1 = vec2mat(poses1)
     poses2 = vec2mat(poses2)
     return np.mean(np.linalg.norm(poses1[:, :3] - poses2[:, :3], axis=1))
+
+if __name__=="__main__":
+    folder = 'slam_data/0613-slam-aruco'
+    joints_traj = np.load(f'{folder}/traj.npy')
+    slam_poses = np.load(f'{folder}/slam_poses.npy')
+    robot_poses = np.load(f'{folder}/robot_poses.npy')
+
+    visualize_poses(robot_poses)
+    plt.show()

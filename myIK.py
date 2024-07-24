@@ -1,9 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.spatial.transform import Rotation
 import roboticstoolbox as rtb
 from utils.pose_util import *
-from utils.pose_zoo import circle_pose, circle_points, rectangle_points
+from utils.pose_zoo import *
 import math
 from spatialmath import SE3
 
@@ -44,21 +43,6 @@ class MyIK:
     def ik_se3(self, se3, q):
         return self.robot_plan.ikine_LM(se3, q0=q).q
     
-    def forward_joints(self, joints_traj):
-        joints_traj = np.array(joints_traj)
-        if len(joints_traj.shape) < 2:
-            joints_traj = np.array([joints_traj])
-        
-        poses = []
-        for joints in joints_traj:
-            pose = self.fk(joints)
-            poses.append(pose)
-
-        poses = np.array(poses)
-        if poses.shape[0] < 2:
-            poses = poses[0]
-        return poses
-
     def plan_trajectory(self, poses, joint_angles, vel_threshold=0.02):
         poses = np.array(poses)
         traj = None
@@ -97,14 +81,10 @@ class MyIK:
     
 if __name__ == "__main__":
 
-    joint_angles = [-1.57, -1.57, 1.57, -1.57, -1.57, 0]
-    myIK = MyIK(use_ikfast=False)
-    pose = myIK.forward_joints(joint_angles)
+    joints = [-1.57, -1.57, 1.57, -1.57, -1.57, 0]
+    myIK = MyIK()
+    pose = myIK.fk(joints)
     print('rtb', pose)
-
-    # myIK = MyIK(use_ikfast=True)
-    # pose = myIK.forward_joints(joint_angles)
-    # print('ikfast', pose)
 
     ax = visualize_poses(pose, label='init pose', autoscale=False, ax=None)
 
@@ -117,8 +97,9 @@ if __name__ == "__main__":
         # points = rectangle_points(init_pose[:3], x=0.1, y=0.1)
         visualize_poses(points, label="points to plan", color='y', autoscale=False, ax=ax)
 
-        traj = myIK.plan_trajectory(points, joint_angles)
-        traj_poses = myIK.forward_joints(traj)
-        visualize_poses(traj_poses, label="traj points", color='g', autoscale=False, ax=ax)
+        traj = myIK.plan_trajectory(points, joints)
+        for j in traj:
+            poses = myIK.fk(j)
+        visualize_poses(poses, label="traj points", color='g', autoscale=False, ax=ax)
         plt.show()
         myIK.show_traj(traj,loop=True)

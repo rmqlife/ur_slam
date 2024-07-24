@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation
 from scipy.spatial.distance import cdist
 from utils.pose_util import *
-from myIK import MyIK
 import roboticstoolbox as rtb
 import time
 
@@ -140,8 +139,6 @@ def compute_model():
     joints_traj = np.load(f'{folder}/traj.npy')
     slam_poses = np.load(f'{folder}/slam_poses.npy')
     
-    ik = MyIK(False)
-    # robot_poses = ik.forward_joints(joints_traj)
     robot_poses = np.load(f'{folder}/robot_poses.npy')
     hand_eye_slam = HandEyeSlam()
     hand_eye_slam.joint_traj = joints_traj
@@ -149,8 +146,6 @@ def compute_model():
     hand_eye_slam.save(f'{folder}/hand_eye_slam_{time.strftime("%m%d-%H%M")}.npz')
 
 def visualize(ur5, q,T_camera, T_slam):
-
-
     ur5.plot(q,backend='pyplot')
     T_ee = ur5.fkine(q)
     T_camera_base = T_ee * T_camera
