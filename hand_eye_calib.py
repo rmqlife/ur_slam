@@ -64,7 +64,6 @@ class HandEyeSlam:
 
         import cv2
         R_c2g, t_c2g = cv2.calibrateHandEye(R_gripper2base=R_gripper2base, t_gripper2base=t_gripper2base, R_target2cam=R_target2cam, t_target2cam=t_target2cam)
-        # t_c2g = t_c2g[:,0]
         print("T_c2g", [R_c2g, t_c2g])
         # # translate gripper pose to camera pose
         self.R_g2c, self.t_g2c = inverse_Rt(R_c2g, t_c2g)
@@ -110,7 +109,7 @@ def load_object(file_path):
 def validate_model():
     # test 
     hand_eye_slam = HandEyeSlam()
-    hand_eye_slam.load(f'slam_data/0613-slam-aruco/hand_eye_slam_0724-1006.npz')
+    hand_eye_slam.load(f'slam_data/0613-slam-aruco/hand_eye_slam_0724-1706.npz')
 
     R_c2g, t_c2g,T_t2c,T_g2b,joint_traj= hand_eye_slam.R_c2g, hand_eye_slam.t_c2g, hand_eye_slam.T_t2c, hand_eye_slam.T_g2b, hand_eye_slam.joint_traj
     T_c2g = np.eye(4)
@@ -128,17 +127,16 @@ def validate_model():
     for i in range(len(joint_traj)):
         q = joint_traj[i]
         T_slam = SE3(T_t2b[i])
-        visualize(ur5, q, T_camera, T_slam)
-        plt.show()
-        print(T_slam)
-        plt.pause(0.1)
-        plt.clf()
+        # visualize(ur5, q, T_camera, T_slam)
+        # plt.show()
+        T_slam.printline()
+        # plt.pause(0.1)
+        # plt.clf()
 
 def compute_model():
     folder = 'slam_data/0613-slam-aruco'
     joints_traj = np.load(f'{folder}/traj.npy')
     slam_poses = np.load(f'{folder}/slam_poses.npy')
-    
     robot_poses = np.load(f'{folder}/robot_poses.npy')
     hand_eye_slam = HandEyeSlam()
     hand_eye_slam.joint_traj = joints_traj
@@ -156,8 +154,6 @@ def visualize(ur5, q,T_camera, T_slam):
     plt.gca().set_xlim([-1, 1])  # Set x-axis limits
     plt.gca().set_ylim([-1, 1])  # Set y-axis limits
     plt.gca().set_zlim([-1, 1])  # Set z-axis limits (if applicable)
-
-
 
 if __name__ == "__main__":
     compute_model()

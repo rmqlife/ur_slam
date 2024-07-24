@@ -9,6 +9,8 @@ import cv2
 from follow_aruco import *
 
 
+base_transform = SE3.Rx(135, unit='deg')
+
 key_map = {
     ord('!'): -1,  # Shift+1
     ord('@'): -2,  # Shift+2
@@ -70,22 +72,24 @@ def lookup_action(code, t_move=0.03, r_move=5):
     return None
 
 class MyIK_rotate(MyIK):
-    base_transform = SE3.Rx(135, unit='deg')
+    def __init__(self, transform):
+        self.transform = transform
+        super.__init__()
 
     def fk_se3(self, joints):
         pose = super().fk(joints)
         pose_se3 = pose_to_SE3(pose)
-        return self.base_transform * pose_se3
+        return self.transform * pose_se3
 
     def ik_se3(self, pose, q):
-        pose = self.base_transform.inv() * pose
+        pose = self.transform.inv() * pose
         return super().ik_se3(pose, q)
 
 
 
 def step(robot, action, wait):
     joints = robot.get_joints()
-    myIK = MyIK_rotate(use_ikfast=False)
+    myIK = MyIK_rotate(base_transform)
     pose_se3 = myIK.fk_se3(joints)
 
     print('action print'), action.printline()

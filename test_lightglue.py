@@ -44,7 +44,7 @@ if __name__=="__main__":
     print(R, t)
 
 
-    from myIK_SLAM import MyIK_SLAM
+    from archive.myIK_SLAM import MyIK_SLAM
     from pose_util import transform_pose
     ik_slam = MyIK_SLAM(slam_path='hand_eye_slam.npz', use_ikfast=True)
 

@@ -14,9 +14,7 @@ def rectangle_points(center, x, y):
     # connect start to end    
     return points
 
-def swap_quat(q):
-    # xyzw to wxyz
-    return [q[3], q[0], q[1], q[2]]
+
 
 def vec_to_quat(v1, v2):
     import tf.transformations as transformations

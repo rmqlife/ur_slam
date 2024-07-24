@@ -4,7 +4,6 @@ from scipy.spatial.transform import Rotation
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from spatialmath import SE3
-import transforms3d.quaternions as tq
 
 unit_vector = [1,0,0]
 
@@ -57,12 +56,21 @@ def pose_to_SE3(pose):
     t.t = pose[:3]
     return t
 
+
+def xyzw2wxyz(q):
+    return [q[3], q[0], q[1], q[2]]
+
+def wxyz2xyzw(q):
+    return [q[1], q[2], q[3], q[0]]
+
 def R_to_quat(R):
-    # return tq.mat2quat(R)
+    import transforms3d.quaternions as tq
+    return wxyz2xyzw(tq.mat2quat(R))
     return Rotation.from_matrix(R).as_quat()
 
 def quat_to_R(q):
-    # return tq.quat2mat(q)
+    import transforms3d.quaternions as tq
+    return tq.quat2mat(xyzw2wxyz(q))
     return  Rotation.from_quat(q).as_matrix()
 
 

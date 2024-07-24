@@ -1,8 +1,7 @@
 import cv2
 import numpy as np
-# Assuming lightglue_util is a module you've created or imported from somewhere
 from utils.lightglue_util import MyGlue, load_intrinsics, print_array
-from myIK_SLAM import MyIK_SLAM, poses_error
+from archive.myIK_SLAM import MyIK_SLAM, poses_error
 from utils.pose_util import transform_pose
 
 home = 'data/0612-facedown'
@@ -12,7 +11,6 @@ intrinsics_path="slam_data/intrinsics_d435.json"
 slam_path = 'data/0613-slam/hand_eye_slam.npz'
 
 def load_rgb_depth(img_id):
-    # Fixed the incorrect variable name depth_path2 to depth_path
     image_path = f"{home}/rgb_{img_id}.png"
     depth_path = f"{home}/depth_{img_id}.png"  # Assuming depth images have a different naming convention
     rgb = cv2.imread(image_path)

@@ -19,7 +19,7 @@ class RTABMapPoseListener:
         if self.verbose:
             print("Pose Estimation:")
             print("Position (x, y, z):", self.position)
-            print("Orientation (w, x, y, z):", self.orientation)
+            print("Orientation (x, y, z, w):", self.orientation)
 
     def get_pose(self):
         return np.array(self.position + self.orientation)
