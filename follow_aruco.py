@@ -2,7 +2,7 @@ from utils.aruco_util import *
 from ros_utils.myImageSaver import MyImageSaver
 import rospy
 import cv2
-from replay_aruco_poses import *
+# from replay_aruco_poses import *
 from std_msgs.msg import Float32
 import os
 
@@ -36,12 +36,8 @@ if __name__=="__main__":
     image_saver = MyImageSaver()
     rospy.sleep(1)
     framedelay = 1000//20
-
     intrinsics = load_intrinsics("slam_data/intrinsics_d435.json")
-
-
     while not rospy.is_shutdown():
-        
         frame = image_saver.rgb_image
         cam_pose = get_cam_pose(frame, intrinsics)
         print(cam_pose)

@@ -9,9 +9,27 @@ import cv2
 from follow_aruco import *
 from ros_utils.myImageSaver import MyImageSaver
 from ros_utils.myRTABMap import RTABMapPoseListener
-
-
 from ik_step import *
+
+# USAGE: 
+# traj = configs_to_traj("slam_data/joint_configs.json", vel_threshold=0.03)
+# traj = traj.tolist()
+def configs_to_traj(config_path, vel_threshold):
+    from myConfig import MyConfig
+    joint_configs = MyConfig(config_path)
+    # print(joint_configs.config_dict)
+    joints = []
+    for k in ['q1','q2','q3','q4','q1']:
+        j = joint_configs.get(k)
+        print(j)
+        joints.append(j)
+
+    myIK = MyIK()
+    poses = myIK.forward_joints(joints)
+    print(poses)
+    # plan poses
+    traj = myIK.plan_trajectory(poses, joints[0], vel_threshold=vel_threshold)
+    return traj
 
 
 if __name__ == "__main__":

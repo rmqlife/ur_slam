@@ -8,15 +8,10 @@ import math
 from spatialmath import SE3
 
 class MyIK:
-    def __init__(self, use_ikfast=False):
+    def __init__(self):
         self.robot_show = rtb.models.UR5() #self.ur10()
-        if use_ikfast:
-            from ur_ikfast import ur_kinematics
-            self.robot_plan = ur_kinematics.URKinematics('ur5e')
-        else:
-            self.robot_plan = self.robot_show
+        self.robot_plan = self.robot_show
             
-        self.use_ikfast=use_ikfast
 
     def ur10(self):
         ## UR10 DH Parameters
@@ -37,20 +32,13 @@ class MyIK:
         return rtb.DHRobot([L1, L2, L3, L4, L5, L6], name='UR10')
 
     def fk(self, joints):
-        if self.use_ikfast:
-            pose = self.robot_plan.forward(joints)
-        else:
-            Rt = self.robot_plan.fkine(joints)
-            pose = SE3_to_pose(Rt)
+        Rt = self.robot_plan.fkine(joints)
+        pose = SE3_to_pose(Rt)
         return pose
     
     def ik(self, pose, q):
-        if self.use_ikfast:
-            joints = self.robot_plan.inverse(pose, all_solutions=False, q_guess=q)
-        else:
-            # t = rtb
-            Rt = pose_to_SE3(pose)
-            joints = self.robot_plan.ikine_LM(Rt, q0=q).q
+        Rt = pose_to_SE3(pose)
+        joints = self.robot_plan.ikine_LM(Rt, q0=q).q
         return joints
 
     def ik_se3(self, se3, q):
