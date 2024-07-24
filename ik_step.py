@@ -69,24 +69,30 @@ def lookup_action(code, t_move=0.03, r_move=5):
         return SE3.Rz(movement, unit='deg')
     return None
 
+class MyIK_rotate(MyIK):
+    base_transform = SE3.Rx(135, unit='deg')
+
+    def fk_se3(self, joints):
+        pose = super().fk(joints)
+        pose_se3 = pose_to_SE3(pose)
+        return self.base_transform * pose_se3
+
+    def ik_se3(self, pose, q):
+        pose = self.base_transform.inv() * pose
+        return super().ik_se3(pose, q)
+
+
 
 def step(robot, action, wait):
-
     joints = robot.get_joints()
-    myIK = MyIK(use_ikfast=False)
-    pose = myIK.fk(joints)
-    pose_se3 = pose_to_SE3(pose)
+    myIK = MyIK_rotate(use_ikfast=False)
+    pose_se3 = myIK.fk_se3(joints)
 
-    base_transform = SE3.Rx(-135, unit='deg')
-
-    # rotation keep the x, y, z
-    action = base_transform * action * base_transform.inv()
     print('action print'), action.printline()
-    
     pose_se3_new = action * pose_se3
     if np.linalg.norm(action.t)<0.001:
+        # rotation keep the x, y, z
         pose_se3_new.t = pose_se3.t
-    
     # move
     joints_star = myIK.ik_se3(pose_se3_new, q=joints)
     # compute the difference between joints and joints_star
@@ -94,14 +100,14 @@ def step(robot, action, wait):
     print(f"joints movement {joints_movement}")
     
     
-    if joints_movement>0.5:
+    if joints_movement>1:
         print('something wrong with IK in step()')
         return None
     else:
         robot.move_joints(joints_star, duration=5*joints_movement, wait=wait)
         
         # pose_se3_new.printline()
-    return SE3_to_pose(base_transform * pose_se3_new)
+    return SE3_to_pose(pose_se3_new)
 
 if __name__ == "__main__":
     rospy.init_node('ik_step', anonymous=True)
@@ -127,7 +133,8 @@ if __name__ == "__main__":
             action = lookup_action(code)
             pose = step(robot, action=action, wait=False)
             print('robot pose', np.round(pose[:3], 3))
-            print("cam pose", np.round(cam_pose[:3], 3))
+            if cam_pose is not None:
+                print("cam pose", np.round(cam_pose[:3], 3))
         # i += 1
         # # build action
         # # test actions

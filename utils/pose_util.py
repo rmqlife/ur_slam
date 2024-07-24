@@ -4,6 +4,7 @@ from scipy.spatial.transform import Rotation
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from spatialmath import SE3
+import transforms3d.quaternions as tq
 
 unit_vector = [1,0,0]
 
@@ -58,10 +59,12 @@ def pose_to_SE3(pose):
     return t
 
 def R_to_quat(R):
-    return Rotation.from_matrix(R).as_quat()
+    return tq.mat2quat(R)
+    # return Rotation.from_matrix(R).as_quat()
 
-def quat_to_R(R):
-    return  Rotation.from_quat(R).as_matrix()
+def quat_to_R(q):
+    return tq.quat2mat(q)
+    # return  Rotation.from_quat(R).as_matrix()
 
 
 def pose_to_Rt(pose):
@@ -74,9 +77,10 @@ def Rt_to_pose(R, t):
     return np.array(pose)
 
 def R_dot_quat(R, quat):
-    quat_mat = Rotation.from_quat(quat).as_matrix()
+    quat_mat = quat_to_R(quat)
+    # quat_mat = Rotation.from_quat(quat).as_matrix()
     quat_mat = np.dot(R, quat_mat)
-    quat = Rotation.from_matrix(quat_mat).as_quat()
+    quat = R_to_quat(quat_mat)
     return quat
 
 def inverse_Rt(R, t):
@@ -91,8 +95,10 @@ def inverse_pose(pose):
 def relative_rotation(q1, q2):
     # q1 to q2
     # Convert quaternions to rotation objects
-    rot1 = Rotation.from_quat(q1)
-    rot2 = Rotation.from_quat(q2)
+    # rot1 = Rotation.from_quat(q1)
+    # rot2 = Rotation.from_quat(q2)
+    rot1 = quat_to_R(q1)
+    rot2 = quat_to_R(q2)
 
     # Compute the relative rotation from rot1 to rot2
     relative_rotation = rot2 * rot1.inv()
