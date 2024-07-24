@@ -74,11 +74,10 @@ def lookup_action(code, t_move=0.03, r_move=5):
 class MyIK_rotate(MyIK):
     def __init__(self, transform):
         self.transform = transform
-        super.__init__()
+        super().__init__()
 
     def fk_se3(self, joints):
-        pose = super().fk(joints)
-        pose_se3 = pose_to_SE3(pose)
+        pose_se3 = super().fk_se3(joints)
         return self.transform * pose_se3
 
     def ik_se3(self, pose, q):
@@ -103,14 +102,11 @@ def step(robot, action, wait):
     joints_movement = np.max(np.abs(joints - joints_star))
     print(f"joints movement {joints_movement}")
     
-    
     if joints_movement>1:
         print('something wrong with IK in step()')
-        return None
+        pose_se3_new = pose_se3
     else:
         robot.move_joints(joints_star, duration=5*joints_movement, wait=wait)
-        
-        # pose_se3_new.printline()
     return SE3_to_pose(pose_se3_new)
 
 if __name__ == "__main__":
