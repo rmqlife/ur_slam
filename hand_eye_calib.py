@@ -131,6 +131,7 @@ def compute_model():
 if __name__ == "__main__":
     myHandEye = compute_model()
     T_t2b = myHandEye.compute_t2b()
-    T_t2b = SE3(T_t2b[0]) # select one as T_t2b
-    print(T_t2b)
+    T_b2t = SE3(T_t2b[0]).inv() # select one as T_t2b
+    print(T_b2t)
+    save_object(T_b2t, "slam_data/base_transform.pkl")
     validate_model()

@@ -7,9 +7,10 @@ import rospy
 from std_msgs.msg import Float32
 import cv2
 from follow_aruco import *
+import sys
+sys.path.insert(0,'/home/rmqlife/work/catkin_ur5/src/teleop/src')
+from myRobot import MyRobot
 
-
-base_transform = SE3.Rx(135, unit='deg')
 
 key_map = {
     ord('!'): -1,  # Shift+1
@@ -26,31 +27,6 @@ key_map = {
     ord('6'): 6    # 6
 }
 
-
-class MySubscriber:
-    def __init__(self, topic_name, topic_type):
-        rospy.Subscriber(topic_name, topic_type, self.callback)
-        # self.start_listening()
-        self.get_return = False
-        while not self.get_return:
-            print('waiting for topic to publish...')
-            rospy.sleep(0.5)
-
-    def callback(self, data):
-        # rospy.loginfo(f"Received float value: {data.data}")
-        self.data = data.data
-        self.get_return = True
-
-    def start_listening(self):
-        rospy.spin()
-
-
-def init_real_robot():
-    import sys
-    sys.path.insert(0,'/home/rmqlife/work/catkin_ur5/src/teleop/src')
-    from myRobot import MyRobot
-    robot=MyRobot()
-    return robot
 
 def lookup_action(code, t_move=0.03, r_move=5):
     if abs(code)<=3:
@@ -71,6 +47,7 @@ def lookup_action(code, t_move=0.03, r_move=5):
         return SE3.Rz(movement, unit='deg')
     return None
 
+
 class MyIK_rotate(MyIK):
     def __init__(self, transform):
         self.transform = transform
@@ -84,41 +61,87 @@ class MyIK_rotate(MyIK):
         pose = self.transform.inv() * pose
         return super().ik_se3(pose, q)
 
+class MySubscriber:
+    def __init__(self, topic_name, topic_type):
+        rospy.Subscriber(topic_name, topic_type, self.callback)
+        # self.start_listening()
+        self.get_return = False
+        while not self.get_return:
+            print('waiting for topic to publish...')
+            rospy.sleep(0.5)
 
+    def callback(self, data):
+        # rospy.loginfo(f"Received float value: {data.data}")
+        self.data = data.data
+        self.get_return = True
 
-def step(robot, action, wait):
-    joints = robot.get_joints()
-    myIK = MyIK_rotate(base_transform)
-    pose_se3 = myIK.fk_se3(joints)
+    def start_listening(self):
+        rospy.spin()
 
-    print('action print'), action.printline()
-    pose_se3_new = action * pose_se3
-    if np.linalg.norm(action.t)<0.001:
-        # rotation keep the x, y, z
-        pose_se3_new.t = pose_se3.t
-    # move
-    joints_star = myIK.ik_se3(pose_se3_new, q=joints)
-    # compute the difference between joints and joints_star
-    joints_movement = np.max(np.abs(joints - joints_star))
-    print(f"joints movement {joints_movement}")
+class MyRobot_with_IK(MyRobot):
+    def __init__(self,myIK):
+        self.myIK = myIK
+        super().__init__()
+
+    def step(self, action, wait):
+        pose_se3 = pose_to_SE3(self.get_pose())
+        print('action print'), action.printline()
+        pose_se3_new = action * pose_se3
+        if np.linalg.norm(action.t)<0.001:
+            # rotation keep the x, y, z
+            pose_se3_new.t = pose_se3.t
+        
+        return self.goto_pose(pose_se3_new, wait)
+
+    def get_pose(self):
+        return self.myIK.fk(super().get_joints())
+
+    def goto_pose(self, pose, wait):
+        joints = super().get_joints()
+        pose_now = self.myIK.fk_se3(joints)
+        joints_star = self.myIK.ik_se3(pose, q=joints)
+        # compute the difference between joints and joints_star
+        joints_movement = np.max(np.abs(joints - joints_star))
+        print(f"joints movement {joints_movement}")
+        
+        if joints_movement>1:
+            print('something wrong with goto_pose()')
+            pose = pose_now
+        else:
+            self.move_joints(joints_star, duration=5*joints_movement, wait=wait)
+        return SE3_to_pose(pose)
+
     
-    if joints_movement>1:
-        print('something wrong with IK in step()')
-        pose_se3_new = pose_se3
-    else:
-        robot.move_joints(joints_star, duration=5*joints_movement, wait=wait)
-    return SE3_to_pose(pose_se3_new)
+    def goto_poses(self, poses, dry_run):
+        joints = super().get_joints()
+        traj = self.myIK.plan_trajectory(poses, joints)
+        self.myIK.show_traj(traj, loop=dry_run)
+        if not dry_run:
+            for joints_star in traj:
+                joints = super().get_joints()
+                joints_movement = np.max(np.abs(joints - joints_star))
+                print(f"joints movement {joints_movement}")
+                super().move_joints(joints_star, duration=3*joints_movement, wait=True)
+
+
+def init_robot():
+    from hand_eye_calib import load_object
+    base_transform = SE3.Rx(135, unit='deg')
+    # base_transform = load_object("slam_data/base_transform.pkl")
+    myIK = MyIK_rotate(base_transform)
+    return MyRobot_with_IK(myIK=myIK)  
+
 
 if __name__ == "__main__":
     rospy.init_node('ik_step', anonymous=True)
-    robot = init_real_robot()   
     image_saver = MyImageSaver()
     intrinsics = load_intrinsics("slam_data/intrinsics_d435.json")
     framedelay = 1000//20
 
-    i = 0
+    robot = init_robot()
+    print(robot.get_joints())
+    
     while not rospy.is_shutdown():
-
         frame = image_saver.rgb_image
         cam_pose = get_cam_pose(frame, intrinsics)
         cv2.imshow('Camera', frame)
@@ -131,7 +154,7 @@ if __name__ == "__main__":
             code  = key_map[key]
             print(f"action {code}")
             action = lookup_action(code)
-            pose = step(robot, action=action, wait=False)
+            pose = robot.step(action=action, wait=False)
             print('robot pose', np.round(pose[:3], 3))
             if cam_pose is not None:
                 print("cam pose", np.round(cam_pose[:3], 3))

@@ -59,6 +59,7 @@ class MyIK:
             if vel<vel_threshold:
                 num_steps=1
             else:
+                print('vel threshold', vel_threshold)
                 num_steps=int(math.floor(vel/vel_threshold))
             
             start_joint_angles = self.ik(start_pose, joint_angles)
