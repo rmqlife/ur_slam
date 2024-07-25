@@ -31,14 +31,13 @@ class MyIK:
         return rtb.DHRobot([L1, L2, L3, L4, L5, L6], name='UR10')
 
     def fk(self, joints):
-        Rt = self.robot_plan.fkine(joints)
-        pose = SE3_to_pose(Rt)
-        return pose
+        return SE3_to_pose(self.fk_se3(joints))
     
     def ik(self, pose, q):
-        Rt = pose_to_SE3(pose)
-        joints = self.robot_plan.ikine_LM(Rt, q0=q).q
-        return joints
+        return self.ik_se3(pose_to_SE3(pose), q)
+    
+    def fk_se3(self, joints):
+        return self.robot_plan.fkine(joints)
 
     def ik_se3(self, se3, q):
         return self.robot_plan.ikine_LM(se3, q0=q).q
@@ -48,7 +47,7 @@ class MyIK:
         traj = None
         if poses.shape[1]==3:
             # it is a points
-            init_pose = self.forward_joints(joint_angles)
+            init_pose = self.fk(joint_angles)
             poses = append_vector(poses, init_pose[3:])
         
         # end_joint_angles = joint_angles
