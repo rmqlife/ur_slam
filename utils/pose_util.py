@@ -65,14 +65,13 @@ def wxyz2xyzw(q):
 
 def R_to_quat(R):
     import transforms3d.quaternions as tq
-    return wxyz2xyzw(tq.mat2quat(R))
+    # return wxyz2xyzw(tq.mat2quat(R))
     return Rotation.from_matrix(R).as_quat()
 
 def quat_to_R(q):
     import transforms3d.quaternions as tq
-    return tq.quat2mat(xyzw2wxyz(q))
+    # return tq.quat2mat(xyzw2wxyz(q))
     return  Rotation.from_quat(q).as_matrix()
-
 
 def pose_to_Rt(pose):
     R = quat_to_R(pose[3:])
@@ -91,6 +90,11 @@ def inverse_pose(pose):
     R_star, t_star = inverse_Rt(R, t)
     return Rt_to_pose(R_star, t_star)
 
+def Rt_dot(R1, t1, R2, t2):
+    #R2 = R1 dot R0
+    R = np.dot(R1, R2)
+    t = np.dot(R1, t2) + t1
+    return R, t
 
 def relative_rotation(q1, q2):
     # q1 to q2
@@ -110,7 +114,6 @@ def transform_pose(R, t, pose):
         pose_star[3:] =  R_to_quat(R @ quat_to_R(pose[3:]))
     return pose_star
  
-
 def transform_poses(R, t, poses):
     # single vector
     poses = np.array(poses)
