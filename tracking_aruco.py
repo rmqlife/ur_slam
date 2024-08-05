@@ -3,8 +3,9 @@ import numpy as np
 from utils.lightglue_util import MyGlue, load_intrinsics, print_array
 from archive.myIK_SLAM import MyIK_SLAM, poses_error
 from utils.pose_util import transform_pose
+from hand_eye_calib import load_object
 
-home = 'data/0612-facedown'
+home = 'data/0612-aruco'
 id_src = 8
 id_dst = 26
 intrinsics_path="slam_data/intrinsics_d435.json"
@@ -19,10 +20,10 @@ def load_rgb_depth(img_id):
 
 if __name__ == "__main__":
     glue = MyGlue(match_type="LightGlue") # Aruco LightGlue
-
+    
     # Fixed the variable names to match the function definition
-    src_rgb, src_depth = load_rgb_depth(id_src)
-    dst_rgb, dst_depth = load_rgb_depth(id_dst)  # Assuming you want to load the second image as the destination
+    src_rgb, src_depth = load_rgb_depth(8)
+    dst_rgb, dst_depth = load_rgb_depth(2)  # Assuming you want to load the second image as the destination
 
     traj_path = f"{home}/traj.npy"
     intrinsics = load_intrinsics(intrinsics_path)
@@ -31,18 +32,3 @@ if __name__ == "__main__":
     R, t = glue.match_3d(src_pts, dst_pts, src_depth, dst_depth, intrinsics, show=False)
     print("transformation", R, t)
 
-    ik = MyIK_SLAM(slam_path=slam_path, use_ikfast=False)
-
-    joints_traj = np.load(traj_path)
-    poses = ik.forward_joints(joints_traj=joints_traj)
-
-    pose_src = poses[id_src]  # Renamed pose1 to pose_src
-    pose_dst = poses[id_dst]   # Renamed pose2 to pose_dst for consistency
-    pose_dst_star = transform_pose(R, t, pose_src)  # Using the new variable name
-    print(poses.shape)
-
-    print_array(pose_src)
-    print_array(pose_dst)
-    print_array(pose_dst_star)
-    print(poses_error(pose_dst, pose_dst_star))
-    # R, t

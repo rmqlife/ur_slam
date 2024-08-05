@@ -26,7 +26,7 @@ def configs_to_traj(config_path, vel_threshold):
 
     myIK = MyIK()
     poses = myIK.forward_joints(joints)
-    print(poses)
+    print("pose",poses)
     # plan poses
     traj = myIK.plan_trajectory(poses, joints[0], vel_threshold=vel_threshold)
     return traj
@@ -34,7 +34,8 @@ def configs_to_traj(config_path, vel_threshold):
 
 if __name__ == "__main__":
     rospy.init_node('ik_step', anonymous=True)
-    robot = init_real_robot()   
+    robot = init_robot()
+    robot2 = MyIK() 
     image_saver = MyImageSaver()
     intrinsics = load_intrinsics("slam_data/intrinsics_d435.json")
     framedelay = 1000//20
@@ -44,6 +45,7 @@ if __name__ == "__main__":
     # collect data
     slam_poses = []
     robot_poses = []
+    traj_poses = []
 
     while not rospy.is_shutdown():
         frame = image_saver.rgb_image
@@ -54,26 +56,29 @@ if __name__ == "__main__":
             break
         if key == ord('s'):
             image_saver.record()
-
-            #slam_pose = slam_pose_listener.get_pose()
-            slam_pose = cam_pose
+            slam_pose = slam_pose_listener.get_pose()
+            joints = robot.get_joints()
+            robot_pose = robot2.fk(joints)
+            # slam_pose = cam_pose
             image_saver.record()  # Save images
             slam_poses.append(slam_pose)
             robot_poses.append(robot_pose)
+            traj_poses.append(joints)
+            
             print('robot pose', np.round(robot_pose[:3], 3))
-            print("cam pose", np.round(cam_pose[:3], 3))            
+            print("slam pose", np.round(slam_pose[:3], 3))            
         elif key in key_map:
             code  = key_map[key]
             print(f"action {code}")
-            robot_pose = step(robot, action=lookup_action(code), wait=True)
-            
-            
-
+            robot.step(action=lookup_action(code), wait=False)
         # save data
     ik = MyIK()
     robot_poses = np.array(robot_poses)
     slam_poses=np.array(slam_poses)
+    traj_poses = np.array(traj_poses)
 
     np.save(os.path.join(home,  'robot_poses'), robot_poses)
     np.save(os.path.join(home,  'slam_poses'), slam_poses)
+    np.save(os.path.join(home,  'traj'), traj_poses)
+
 

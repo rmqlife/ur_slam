@@ -95,7 +95,7 @@ class MyRobot_with_IK(MyRobot):
 
     def get_pose(self):
         return self.myIK.fk(super().get_joints())
-
+    
     def goto_pose(self, pose, wait):
         joints = super().get_joints()
         pose_now = self.myIK.fk_se3(joints)
@@ -126,8 +126,8 @@ class MyRobot_with_IK(MyRobot):
 
 def init_robot():
     from hand_eye_calib import load_object
-    base_transform = SE3.Rx(135, unit='deg')
-    # base_transform = load_object("slam_data/base_transform.pkl")
+    # base_transform = SE3.Rx(135, unit='deg')
+    base_transform = load_object("slam_data/base_transform.pkl")
     myIK = MyIK_rotate(base_transform)
     return MyRobot_with_IK(myIK=myIK)  
 
@@ -158,6 +158,7 @@ if __name__ == "__main__":
             print('robot pose', np.round(pose[:3], 3))
             if cam_pose is not None:
                 print("cam pose", np.round(cam_pose[:3], 3))
+            image_saver.record()
         # i += 1
         # # build action
         # # test actions

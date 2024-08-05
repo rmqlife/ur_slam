@@ -79,6 +79,9 @@ class MyHandEye:
         import cv2
         R_c2g, t_c2g = cv2.calibrateHandEye(R_gripper2base=R_gripper2base, t_gripper2base=t_gripper2base, R_target2cam=R_target2cam, t_target2cam=t_target2cam)
         self.T_c2g = Rt_to_T(R_c2g, t_c2g)
+        print("camera to gripper:",self.T_c2g)
+
+
         return self.T_c2g
         # # translate gripper pose to camera pose
 
@@ -91,7 +94,7 @@ class MyHandEye:
 def validate_model():
     # test 
     myHandEye = MyHandEye()
-    myHandEye.load(f'slam_data/0613-slam-aruco/hand_eye.npz')
+    myHandEye.load(f'data/images-20240801-160443/hand_eye.npz')
 
     T_c2g, joint_traj = myHandEye.T_c2g, myHandEye.joint_traj
     T_t2b = myHandEye.compute_t2b()
@@ -104,15 +107,18 @@ def validate_model():
         T_slam.printline()
         # visualize(ur5, q, T_camera, T_slam)
         # plt.show()
-        # plt.pause(0.1)
+        # input("press enter")
         # plt.clf()
 
 def compute_model():
-    folder = 'slam_data/0613-slam-aruco'
+    folder = 'data/images-20240801-160443'
     joints_traj = np.load(f'{folder}/traj.npy')
 
     slam_poses = np.load(f'{folder}/slam_poses.npy')
     robot_poses = np.load(f'{folder}/robot_poses.npy')
+
+    
+
 
     # for j, r in zip(joints_traj, robot_poses):
     #     from myIK import MyIK
@@ -133,5 +139,5 @@ if __name__ == "__main__":
     T_t2b = myHandEye.compute_t2b()
     T_b2t = SE3(T_t2b[0]).inv() # select one as T_t2b
     print(T_b2t)
-    save_object(T_b2t, "slam_data/base_transform.pkl")
+    # save_object(T_b2t, "slam_data/base_transform.pkl")
     validate_model()

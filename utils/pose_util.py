@@ -51,10 +51,10 @@ def SE3_to_pose(Rt):
     return list(Rt.t) + list(R_to_quat(Rt.R))
 
 def pose_to_SE3(pose):
-    t = SE3()
-    t.R[:] = quat_to_R(pose[3:])
-    t.t = pose[:3]
-    return t
+    se3 = SE3.Tx(0)
+    se3.R[:] = quat_to_R(pose[3:])
+    se3.t = pose[:3]
+    return se3
 
 
 def xyzw2wxyz(q):

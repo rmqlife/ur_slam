@@ -49,6 +49,8 @@ class MyIK:
             # it is a points
             init_pose = self.fk(joint_angles)
             poses = append_vector(poses, init_pose[3:])
+
+        print("poses!",poses)
         
         # end_joint_angles = joint_angles
         for i in range(len(poses)-1):
@@ -103,3 +105,4 @@ if __name__ == "__main__":
         visualize_poses(poses, label="traj points", color='g', autoscale=False, ax=ax)
         plt.show()
         myIK.show_traj(traj,loop=True)
+
