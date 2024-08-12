@@ -91,10 +91,10 @@ class MyHandEye:
             T_t2b.append(A @ self.T_c2g @ B)
         return T_t2b
 
-def validate_model():
+def validate_model(model_path):
     # test 
     myHandEye = MyHandEye()
-    myHandEye.load(f'data/images-20240801-160443/hand_eye.npz')
+    myHandEye.load(model_path)
 
     T_c2g, joint_traj = myHandEye.T_c2g, myHandEye.joint_traj
     T_t2b = myHandEye.compute_t2b()
@@ -110,34 +110,25 @@ def validate_model():
         # input("press enter")
         # plt.clf()
 
-def compute_model():
-    folder = 'data/images-20240801-160443'
-    joints_traj = np.load(f'{folder}/traj.npy')
+def compute_model(data_dir):
+    joints_traj = np.load(f'{data_dir}/traj.npy')
 
-    slam_poses = np.load(f'{folder}/slam_poses.npy')
-    robot_poses = np.load(f'{folder}/robot_poses.npy')
-
-    
-
-
-    # for j, r in zip(joints_traj, robot_poses):
-    #     from myIK import MyIK
-    #     myIK = MyIK()
-    #     p = myIK.fk(j)
-    #     print(p)
-    #     print(r)
+    slam_poses = np.load(f'{data_dir}/slam_poses.npy')
+    robot_poses = np.load(f'{data_dir}/robot_poses.npy')
 
     myHandEye = MyHandEye()
     myHandEye.joint_traj = joints_traj
     myHandEye.eye_in_hand(poses_c2t=slam_poses, poses_g2b=robot_poses)
-    myHandEye.save(f'{folder}/hand_eye.npz')
+    myHandEye.save(f'{data_dir}/hand_eye.npz')
     return myHandEye
 
 
 if __name__ == "__main__":
-    myHandEye = compute_model()
+    data_dir = 'data/images-20240807-093733'
+
+    myHandEye = compute_model(data_dir=data_dir)
     T_t2b = myHandEye.compute_t2b()
     T_b2t = SE3(T_t2b[0]).inv() # select one as T_t2b
     print(T_b2t)
-    # save_object(T_b2t, "slam_data/base_transform.pkl")
-    validate_model()
+    save_object(T_b2t, f'{data_dir}/base_transform.pkl')
+    validate_model(model_path=f'{data_dir}/hand_eye.npz')

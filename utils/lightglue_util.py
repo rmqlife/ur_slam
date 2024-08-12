@@ -14,7 +14,7 @@ def replace_path(file_path, src, dst):
 def replace_rgb_to_depth(file_path):
     return replace_path(file_path, 'rgb', 'depth')
 
-def project_to_3d(points, depth, intrinsics, show=True):
+def project_to_3d(points, depth, intrinsics, show=False):
     if show:
         plt.imshow(depth)
     
@@ -91,7 +91,7 @@ class MyGlue:
         if self.match_type=="LightGlue":
             return self.match_with_lightglue(image0, image1, verbose)
         if self.match_type=="Aruco":
-            return self.match_with_aruco(image0, image1, verbose)
+            return self.match_with_aruco(image0, image1, id=0)
         return None, None
     
     def match_with_lightglue(self, image0, image1, verbose):
@@ -114,26 +114,40 @@ class MyGlue:
 
         return m_kpts0, m_kpts1
 
-    def match_with_aruco(self, image0, image1, verbose):
+    def match_with_aruco(self, image0, image1, id):
         from utils.aruco_util import detect_aruco
-        corners0, ids0 = detect_aruco(image0, verbose)
-        corners1, ids1 = detect_aruco(image1, verbose)
-        assert len(ids0)==1
-        assert len(ids1)==1
-        print('match with aruco', (ids0, ids1))
-        # print(corners0[0][0].shape)
-        pts0 = corners0[0][0]
-        pts1 = corners1[0][0]
-        return pts0, pts1
+        corners0, ids0 = detect_aruco(image0, draw_flag=False)
+        corners1, ids1 = detect_aruco(image1, draw_flag=False)
+        pts0, pts1 = [], []
+        common_ids = set(ids0) & set(ids1)
+        common_ids = list(common_ids)
+        if common_ids:
+                # Initialize lists to store the matched points
+                pts0, pts1 = [], []
 
-    def match_3d(self, pts0, pts1, depth0, depth1, intrinsics, show=False):
-        pt3d0 = project_to_3d(pts0, depth0, intrinsics, show=False)
-        pt3d1 = project_to_3d(pts1, depth1, intrinsics, show=False)
+                # Map IDs to corners
+                id_to_corners0 = {id: c for c, id in zip(corners0, ids0)}
+                id_to_corners1 = {id: c for c, id in zip(corners1, ids1)}
+
+                # Collect points for common IDs
+                for i in common_ids:
+                    pts0.extend(id_to_corners0[i])
+                    pts1.extend(id_to_corners1[i])
+
+                return pts0, pts1
+        return None, None
+
+    def map_3d_pts(self, pts0, pts1, depth0, depth1, intrinsics):
+        pt3d0 = project_to_3d(pts0, depth0, intrinsics)
+        pt3d1 = project_to_3d(pts1, depth1, intrinsics)
 
         pt3d0, pt3d1 = filter_out_zeros_points(pt3d0, pt3d1)
         pt3d0 = np.array(pt3d0)
         pt3d1 = np.array(pt3d1)
-
+        return pt3d0, pt3d1
+         
+    def match_3d(self, pts0, pts1, depth0, depth1, intrinsics, show=False):
+        pt3d0, pt3d1 = self.map_3d_pts(pts0, pts1, depth0, depth1, intrinsics)
         R, t = find_transformation(pt3d0, pt3d1)
         
         pt3d1_star = transform_poses(R, t, pt3d0)

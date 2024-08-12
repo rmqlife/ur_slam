@@ -126,37 +126,6 @@ def transform_poses(R, t, poses):
     transformed_poses = np.vstack(transformed_poses)
     return transformed_poses
 
-def icp(poses1, poses2, max_iter=10, threshold=1e-5):
-    # Initial guess for transformation
-    R_est = np.eye(3)
-    t_est = np.zeros(3)
-    for _ in range(max_iter):
-        # Estimate transformation
-        R_est_new, t_est_new = estimate_transform(poses1, poses2, R_est, t_est)
-        print("icp err", np.linalg.norm(t_est_new - t_est))
-        # # Check convergence
-        if np.linalg.norm(R_est_new - R_est) < threshold and np.linalg.norm(t_est_new - t_est) < threshold:
-            break
-        # Update transformation
-        R_est = R_est_new.copy()
-        t_est = t_est_new.copy()
-    return R_est, t_est
-
-def estimate_transform(poses1, poses2, R_init, t_init):
-    # Compute centroids
-    centroid1 = np.mean(poses1, axis=0)
-    centroid2 = np.mean(poses2, axis=0)
-    # Compute centered poses
-    centered_poses1 = poses1 - centroid1
-    centered_poses2 = poses2 - centroid2
-
-    from scipy.linalg import orthogonal_procrustes
-    R_est, _ = orthogonal_procrustes(centered_poses1, centered_poses2)
-    # Compute translation
-    t_est = centroid1 - np.dot(R_est, centroid2)
-    return R_est, t_est
-
-
 def append_vector(matrix, vector_to_append):
     assert len(matrix.shape) == 2, "Input matrix must be 2D"
     res = []
@@ -165,6 +134,7 @@ def append_vector(matrix, vector_to_append):
 
     return np.array(res)
 
+# make sure right handed coordintate
 def find_transformation(X, Y):
     """
     from X to Y
@@ -185,9 +155,42 @@ def find_transformation(X, Y):
     U, S, Vt = np.linalg.svd(C)
     # Determine rotation matrix
     R = np.dot(Vt.T, U.T)
+    # Ensure a right-handed coordinate system
+    if np.linalg.det(R) < 0:
+        Vt[-1, :] *= -1
+        R = np.dot(Vt.T, U.T)
     # Determine translation vector
     t = cY - np.dot(R, cX)
     return R, t
+
+def compute_rigid_transform(source_points, target_points):
+    # Ensure inputs are numpy arrays
+    source_points = np.array(source_points)
+    target_points = np.array(target_points)
+
+    # Compute centroids of each point set
+    centroid_src = np.mean(source_points, axis=0)
+    centroid_tgt = np.mean(target_points, axis=0)
+
+    # Center the point clouds
+    src_centered = source_points - centroid_src
+    tgt_centered = target_points - centroid_tgt
+
+    # Compute the covariance matrix
+    H = np.dot(src_centered.T, tgt_centered)
+
+    # Perform Singular Value Decomposition
+    from scipy.linalg import svd
+    U, _, Vt = svd(H)
+    R = np.dot(Vt.T, U.T)
+
+
+
+    # Compute the translation vector
+    t = centroid_tgt - np.dot(R, centroid_src)
+
+    return R, t
+
 
 def vec2mat(vec):
     if len(vec.shape)<2:

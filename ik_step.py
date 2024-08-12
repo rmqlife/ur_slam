@@ -11,6 +11,7 @@ import sys
 sys.path.insert(0,'/home/rmqlife/work/catkin_ur5/src/teleop/src')
 from myRobot import MyRobot
 
+intrinsics = load_intrinsics("slam_data/intrinsics_d435.json")
 
 key_map = {
     ord('!'): -1,  # Shift+1
@@ -87,32 +88,31 @@ class MyRobot_with_IK(MyRobot):
         pose_se3 = pose_to_SE3(self.get_pose())
         print('action print'), action.printline()
         pose_se3_new = action * pose_se3
-        if np.linalg.norm(action.t)<0.001:
-            # rotation keep the x, y, z
-            pose_se3_new.t = pose_se3.t
+        # if np.linalg.norm(action.t)<0.001:
+        #     # rotation keep the x, y, z
+        pose_se3_new.t = pose_se3.t + action.t
         
         return self.goto_pose(pose_se3_new, wait)
 
     def get_pose(self):
         return self.myIK.fk(super().get_joints())
     
-    def goto_pose(self, pose, wait):
+    def goto_pose(self, pose, wait, coef=3, joint_thresh=1):
         joints = super().get_joints()
         pose_now = self.myIK.fk_se3(joints)
         joints_star = self.myIK.ik_se3(pose, q=joints)
         # compute the difference between joints and joints_star
         joints_movement = np.max(np.abs(joints - joints_star))
         print(f"joints movement {joints_movement}")
-        
-        if joints_movement>1:
+        if joints_movement>joint_thresh:
             print('something wrong with goto_pose()')
             pose = pose_now
         else:
-            self.move_joints(joints_star, duration=5*joints_movement, wait=wait)
+            super().move_joints(joints_star, duration=coef*joints_movement, wait=wait)
         return SE3_to_pose(pose)
 
     
-    def goto_poses(self, poses, dry_run):
+    def goto_poses(self, poses, dry_run, coef=3):
         joints = super().get_joints()
         traj = self.myIK.plan_trajectory(poses, joints)
         self.myIK.show_traj(traj, loop=dry_run)
@@ -121,13 +121,15 @@ class MyRobot_with_IK(MyRobot):
                 joints = super().get_joints()
                 joints_movement = np.max(np.abs(joints - joints_star))
                 print(f"joints movement {joints_movement}")
-                super().move_joints(joints_star, duration=3*joints_movement, wait=True)
+                super().move_joints(joints_star, duration=coef*joints_movement, wait=True)
 
 
 def init_robot():
-    from hand_eye_calib import load_object
-    # base_transform = SE3.Rx(135, unit='deg')
-    base_transform = load_object("slam_data/base_transform.pkl")
+    # from hand_eye_calib import load_object
+    base_transform = SE3.Rx(135, unit='deg')
+    # base_transform *= 
+
+    # base_transform = load_object("slam_data/images-20240731-100429/base_transform.pkl")
     myIK = MyIK_rotate(base_transform)
     return MyRobot_with_IK(myIK=myIK)  
 
@@ -135,7 +137,6 @@ def init_robot():
 if __name__ == "__main__":
     rospy.init_node('ik_step', anonymous=True)
     image_saver = MyImageSaver()
-    intrinsics = load_intrinsics("slam_data/intrinsics_d435.json")
     framedelay = 1000//20
 
     robot = init_robot()
@@ -148,8 +149,6 @@ if __name__ == "__main__":
         key = cv2.waitKey(framedelay) & 0xFF 
         if key == ord('q'):
             break
-        if key == ord('s'):
-            image_saver.record()
         elif key in key_map:
             code  = key_map[key]
             print(f"action {code}")

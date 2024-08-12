@@ -1,7 +1,6 @@
 import cv2
 import cv2.aruco as aruco
 import numpy as np
-import click
 from utils.pose_util import *
 from utils.lightglue_util import load_intrinsics
 import json
@@ -53,12 +52,6 @@ def estimate_markers_poses(corners, marker_size, intrinsics):
     mtx = np.array([[intrinsics["fx"], 0, intrinsics["cx"]],
                     [0, intrinsics["fy"], intrinsics["cy"]],
                     [0, 0, 1]], dtype=np.float32)
-    distortion = np.zeros((5,1))
-
-    # Define camera matrix and distortion coefficients (example values)
-    mtx = np.array([[600, 0, 320],
-                    [0, 600, 240],
-                    [0, 0, 1]], dtype=np.float32)
     distortion = np.zeros((5, 1))  # Assuming no distortion
 
     poses = []
@@ -72,32 +65,5 @@ def estimate_markers_poses(corners, marker_size, intrinsics):
         poses.append(pose)
     return poses
 
-@click.command()
-@click.option("--image-path", type=str, required=True, default="/home/rmqlife/work/ur_slam/utils/aruco_test.jpg", help="Path to the image containing ArUco markers")
-def main(image_path):
-    # Load the image
-    image = cv2.imread(image_path)
-    print(image.shape)
-    # Call the function to detect ArUco markers
-    corners, ids = detect_aruco(image, draw_flag=True)
-    if ids is not None and len(ids) > 0:
-            print(f'corner points: {corners}')
-            print(f'ids: {ids}')
-            poses = estimate_markers_poses(corners, marker_size=0.03, mtx=np.zeros((3,3)), distortion=None)
-            print('poses', poses)
-    else:
-        print('Image not found or unable to load.')
-    cv2.imshow('main', image)
-    cv2.waitKey(0)
 
-# Example usage
-def main_gen_aruco():
-    marker_size = 100  # Size of the marker image in pixels
-    for marker_id in range(20):
-        output_file = f'arucos/aruco_marker_{marker_id}.png'  # Output file name
-        generate_aruco_marker(marker_id, marker_size, output_file)
-
-if __name__ == "__main__":
-    # main()
-    main_gen_aruco()
     

@@ -15,8 +15,8 @@ def get_aruco_poses(corners, ids, intrinsics):
     if ids is not None:
         for k, iden in enumerate(ids):
             poses_dict[iden]=poses[k] 
-
     return poses_dict
+
 
 def get_cam_pose(frame, intrinsics):
     corners, ids = detect_aruco(frame, draw_flag=True)# 
@@ -31,7 +31,19 @@ def get_cam_pose(frame, intrinsics):
         # print('cam', np.round(current_cam[:3], 3))
     return current_cam
 
-
+def get_marker_pose(frame, id=0, draw=True):
+    corners, ids = detect_aruco(frame, draw_flag=draw)# 
+    if ids is not None and len(ids)>0:
+        poses_dict = get_aruco_poses(corners=corners, ids=ids, intrinsics=intrinsics)
+        for i, c in zip(ids, corners):
+            if i == id:
+                # exchange x, y axis
+                transform = SE3([[0,1,0,0],[1,0,0,0],[0,0,1,0],[0,0,0,1]])
+                pose = pose_to_SE3(poses_dict[id])
+                pose = transform * pose
+                return pose, c
+    
+    return None, None
 
 
 if __name__=="__main__":
@@ -39,21 +51,17 @@ if __name__=="__main__":
     image_saver = MyImageSaver()
     rospy.sleep(1)
     framedelay = 1000//20
-    intrinsics = load_intrinsics("slam_data/intrinsics_d435.json")
 
     robot = init_robot()
-
-    goal_frame = None
-
+    goal_pose = None
+    goal_corner = None
     while not rospy.is_shutdown():
         frame = image_saver.rgb_image
-        cam_pose = get_cam_pose(frame, intrinsics)
-        if cam_pose is not None:
-            cam_pose = pose_to_SE3(cam_pose)
+        marker_pose, corner = get_marker_pose(frame, 0)
 
-        if goal_frame is None and cam_pose is not None:
-            goal_frame = frame
-            goal_pose = cam_pose
+        if goal_corner is not None and corner is not None:
+            for (x1, y1), (x2, y2) in zip(corner, goal_corner):
+                cv2.line(frame, (int(x1), int(y1)), (int(x2), int(y2)), (255,255,0), 2)
 
         cv2.imshow('Camera', frame)
         # Exit on 'q' key press
@@ -62,19 +70,28 @@ if __name__=="__main__":
             break
         if key == ord('s'):
             image_saver.record()
+
         elif key in key_map:
             code  = key_map[key]
             print(f"action {code}")
             action = lookup_action(code)
             pose = robot.step(action=action, wait=False)
             print('robot pose', np.round(pose[:3], 3))
-            if cam_pose is not None:
-                print("cam pose")
-                cam_pose.printline()
-                move = goal_pose * cam_pose.inv()
-                print('action todo')
-                move.printline()
-        if key == ord('m') and move is not None:
+
+        if key == ord('m') and goal_pose is not None and marker_pose is not None:
+            move = goal_pose * marker_pose.inv()
+            move = SE3(goal_pose.t) * SE3(marker_pose.t).inv()
+            print('movement')
+            move.printline()
             robot.step(action=move, wait=False)
-            
+
+        if key == ord('g'):
+            # setup goal
+            if marker_pose is not None:
+                goal_pose = marker_pose.copy()
+                goal_corner = corner.copy()
+                print('set goal as')
+                goal_pose.printline()
+            else:
+                print('no valid marker pose')
     cv2.destroyAllWindows()
