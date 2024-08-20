@@ -19,7 +19,6 @@ def project_to_3d(points, depth, intrinsics, show=False):
         plt.imshow(depth)
     
     points_3d = list()
-    
     for x,y in points:
         x = math.floor(x) 
         y = math.floor(y)
@@ -185,7 +184,7 @@ if __name__=="__main__":
     id1=9
     id2=66
 
-    image_path1 = f"data/0612-facedown/rgb_{id1}.png"
+    image_path1 = f"/0612-facedown/rgb_{id1}.png"
     image_path2 = f"data/0612-facedown/rgb_{id2}.png"
     rgb1 = cv2.imread(image_path1)
     rgb2 = cv2.imread(image_path2)

@@ -45,10 +45,10 @@ class MyIK:
     def plan_trajectory(self, poses, joint_angles, vel_threshold=0.02):
         poses = np.array(poses)
         traj = None
-        if poses.shape[1]==3:
-            # it is a points
-            init_pose = self.fk(joint_angles)
-            poses = append_vector(poses, init_pose[3:])
+        # if poses.shape[1]==3:
+        #     # it is a points
+        #     init_pose = self.fk(joint_angles)
+        #     poses = append_vector(poses, init_pose[3:])
 
         print("poses!",poses)
         

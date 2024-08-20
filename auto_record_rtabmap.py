@@ -11,27 +11,34 @@ from ros_utils.myImageSaver import MyImageSaver
 from ros_utils.myRTABMap import RTABMapPoseListener
 from ik_step import *
 
-'''
-after run reset.py 
-"odom frame"
-child_frame_id: "camera_link"
-pose: 
-  pose: 
-    position: 
-      x: -0.0004420131735969335
-      y: -0.00038160476833581924
-      z: -0.0013358555734157562
-    orientation: 
-      x: -0.0054396671612655535
-      y: 0.7049875439653867
-      z: 0.00431244004409534
-      w: 0.7091857131497313
-'''
+# USAGE: 
+# traj = configs_to_traj("slam_data/joint_configs.json", vel_threshold=0.03)
+# traj = traj.tolist()
+def configs_to_traj(config_path, vel_threshold):
+    from myConfig import MyConfig
+    joint_configs = MyConfig(config_path)
+    # print(joint_configs.config_dict)
+    joints = []
+    poses = []
+    myIK = MyIK()
+    for k in ['q1','q2','q3','q4','q1']:#for robot1
+    # for k in ['k1','k2','k3','k4','k5','k6','k1']:#for robot2
+        j = joint_configs.get(k)
+        print(j)
+        poses.append(myIK.fk(j))
+        joints.append(j)
+    # plan poses
+    traj = myIK.plan_trajectory(poses, joints[0], vel_threshold=vel_threshold)
+    return traj
+
 
 if __name__ == "__main__":
+    traj = configs_to_traj("slam_data/joint_configs.json", vel_threshold=0.03)
+    traj = traj.tolist()
     rospy.init_node('ik_step', anonymous=True)
-    robot = init_robot("robot2")
-    robot2 = MyIK() 
+    chosen_robot = 'robot1'
+    robot = init_robot(chosen_robot)
+    robot_without_basetrans = MyIK() 
     image_saver = MyImageSaver()
     intrinsics = load_intrinsics("slam_data/intrinsics_d435.json")
     framedelay = 1000//20
@@ -46,15 +53,14 @@ if __name__ == "__main__":
     while not rospy.is_shutdown():
         frame = image_saver.rgb_image
         cam_pose = get_cam_pose(frame, intrinsics)
-        cv2.imshow('Camera', frame)
-        key = cv2.waitKey(framedelay) & 0xFF 
-        if key == ord('q'):
-            break
-        if key == ord('s'):
+
+        for traj_path in traj:
+            robot.move_joints_smooth(traj_path, coef=3, wait=True)
+            # input("press enter to save")
             image_saver.record()
             slam_pose = slam_pose_listener.get_pose()
             joints = robot.get_joints()
-            robot_pose = robot2.fk(joints)
+            robot_pose = robot_without_basetrans.fk(joints)
             # slam_pose = cam_pose
             image_saver.record()  # Save images
             slam_poses.append(slam_pose)
@@ -62,12 +68,10 @@ if __name__ == "__main__":
             traj_poses.append(joints)
             
             print('robot pose', np.round(robot_pose[:3], 3))
-            print("slam pose", np.round(slam_pose[:3], 3))            
-        elif key in key_map:
-            code  = key_map[key]
-            print(f"action {code}")
-            robot.step(action=lookup_action(code), wait=False)
-        # save data
+            print("slam pose", np.round(slam_pose[:3], 3))
+        break            
+    # save data
+
     ik = MyIK()
     robot_poses = np.array(robot_poses)
     slam_poses=np.array(slam_poses)
@@ -76,5 +80,6 @@ if __name__ == "__main__":
     np.save(os.path.join(home,  'robot_poses'), robot_poses)
     np.save(os.path.join(home,  'slam_poses'), slam_poses)
     np.save(os.path.join(home,  'traj'), traj_poses)
+
 
 

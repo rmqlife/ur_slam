@@ -9,7 +9,7 @@ import cv2
 from follow_aruco import *
 import sys
 sys.path.insert(0,'/home/rmqlife/work/catkin_ur5/src/teleop/src')
-from myRobot import MyRobot
+from myRobot import MyRobot,MyRobotNs
 
 intrinsics = load_intrinsics("slam_data/intrinsics_d435.json")
 
@@ -79,10 +79,10 @@ class MySubscriber:
     def start_listening(self):
         rospy.spin()
 
-class MyRobot_with_IK(MyRobot):
-    def __init__(self,myIK):
+class MyRobot_with_IK(MyRobotNs):
+    def __init__(self,myIK,ns):
         self.myIK = myIK
-        super().__init__()
+        super().__init__(ns)
 
     def step(self, action, wait):
         pose_se3 = pose_to_SE3(self.get_pose())
@@ -124,14 +124,24 @@ class MyRobot_with_IK(MyRobot):
                 super().move_joints(joints_star, duration=coef*joints_movement, wait=True)
 
 
-def init_robot():
-    # from hand_eye_calib import load_object
-    base_transform = SE3.Rx(135, unit='deg')
-    # base_transform *= 
+def init_robot(ns):
+    '''
+    ns : robot topic name space
+    '''
 
+    # from hand_eye_calib import load_object
+    if ns == "robot1":
+        base_transform_100 = SE3.Rx(135, unit='deg')
+        myIK = MyIK_rotate(base_transform_100)
+    elif ns == "robot2":
+        base_transform_200 = SE3.Rx(45,unit="deg")
+        myIK = MyIK_rotate(base_transform_200)
+    else:
+        raise KeyError
     # base_transform = load_object("slam_data/images-20240731-100429/base_transform.pkl")
-    myIK = MyIK_rotate(base_transform)
-    return MyRobot_with_IK(myIK=myIK)  
+    
+
+    return MyRobot_with_IK(myIK=myIK,ns=ns)  
 
 
 if __name__ == "__main__":

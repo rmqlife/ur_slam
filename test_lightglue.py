@@ -20,42 +20,33 @@ def plot_matching(image0, image1, pts0, pts1):
     plt.show()
 
 if __name__=="__main__":
-    glue = MyGlue(match_type="Aruco")
+    glue = MyGlue(match_type="LightGlue")
 
     id1=8
     id2=14
 
-    home = '0612-facedown'
+    home = 'slam_data/0613-slam-aruco'
 
     image_path1 = f"{home}/rgb_{id1}.png"
     image_path2 = f"{home}/rgb_{id2}.png"
     traj_path = f"{home}/traj.npy"
     rgb1 = cv2.imread(image_path1)
     rgb2 = cv2.imread(image_path2)
-
+    print(rgb1.shape)
     pts0, pts1 = glue.match(rgb1, rgb2)
+    print(pts0)
+    show_frame = rgb1.copy()
+    for (x1, y1), (x2, y2) in zip(pts0, pts1):
+        cv2.line(show_frame, (int(x1), int(y1)), (int(x2), int(y2)), (255,255,0), 2)
+
     depth_path1 = replace_rgb_to_depth(image_path1)
     depth_path2 = replace_rgb_to_depth(image_path2)
     depth1 = cv2.imread(depth_path1, cv2.IMREAD_UNCHANGED)
     depth2 = cv2.imread(depth_path2, cv2.IMREAD_UNCHANGED)
 
-    intrinsics = load_intrinsics("intrinsic_parameters.json")
-    R, t = glue.match_3d(rgb1, rgb2, depth1, depth2, intrinsics)
+    intrinsics = load_intrinsics("slam_data/intrinsics_d435.json")
+    R, t = glue.match_3d(pts0, pts1, depth1, depth2, intrinsics)
     print(R, t)
-
-
-    from archive.myIK_SLAM import MyIK_SLAM
-    from pose_util import transform_pose
-    ik_slam = MyIK_SLAM(slam_path='hand_eye_slam.npz', use_ikfast=True)
-
-    joints_traj = np.load(traj_path)
-    poses = ik_slam.forward_joints(joints_traj=joints_traj)
-
-    pose1 = poses[id1]      
-    pose2 = poses[id2]
-    pose1_star= transform_pose(poses[id1], R, t)
-    print(poses.shape)
-
-    print_array(pose1)
-    print_array(pose2)
-    print_array(pose1_star)
+    cv2.imshow('show_frame', show_frame)
+    # Exit on 'q' key press
+    key = cv2.waitKey(0)
