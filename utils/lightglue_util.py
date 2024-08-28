@@ -56,10 +56,8 @@ def load_intrinsics(json_file):
 def filter_out_zeros_points(pt3d1, pt3d2, threshold=1e-4):
     new_pt3d1 = list()
     new_pt3d2 = list()
-    for i in range(len(pt3d1)):
-        # print(p)
-        p1 = pt3d1[i]
-        p2 = pt3d2[i]
+    print('filter')
+    for p1, p2 in zip(pt3d1, pt3d2):
         if p1[2]>threshold and p2[2]>threshold:
             new_pt3d1.append(p1)
             new_pt3d2.append(p2)
@@ -75,8 +73,8 @@ class MyGlue:
     def __init__(self, match_type):
         self.match_type=match_type
         if self.match_type == "LightGlue":
-            # import sys
-            # sys.path.insert(0,'/home/rmqlife/work/LightGlue')
+            import sys
+            sys.path.insert(0,'/home/rmqlife/work/LightGlue')
             from lightglue import LightGlue, SuperPoint, DISK
             from lightglue import viz2d
             import torch

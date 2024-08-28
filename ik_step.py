@@ -7,9 +7,7 @@ import rospy
 from std_msgs.msg import Float32
 import cv2
 from follow_aruco import *
-import sys
-sys.path.insert(0,'/home/rmqlife/work/catkin_ur5/src/teleop/src')
-from myRobot import MyRobot,MyRobotNs
+from ros_utils.myRobotNs import MyRobotNs
 
 intrinsics = load_intrinsics("slam_data/intrinsics_d435.json")
 
@@ -124,7 +122,7 @@ class MyRobot_with_IK(MyRobotNs):
                 super().move_joints(joints_star, duration=coef*joints_movement, wait=True)
 
 
-def init_robot(ns):
+def init_robot(ns='robot1'):
     '''
     ns : robot topic name space
     '''
@@ -139,8 +137,6 @@ def init_robot(ns):
     else:
         raise KeyError
     # base_transform = load_object("slam_data/images-20240731-100429/base_transform.pkl")
-    
-
     return MyRobot_with_IK(myIK=myIK,ns=ns)  
 
 
@@ -149,7 +145,7 @@ if __name__ == "__main__":
     image_saver = MyImageSaver()
     framedelay = 1000//20
 
-    robot = init_robot()
+    robot = init_robot(ns='robot1')
     print(robot.get_joints())
     
     while not rospy.is_shutdown():

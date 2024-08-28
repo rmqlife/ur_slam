@@ -163,7 +163,7 @@ def find_transformation(X, Y):
     t = cY - np.dot(R, cX)
     return R, t
 
-def compute_rigid_transform(source_points, target_points):
+def compute_rigid_transform(source_points, target_points, enable_R=True):
     # Ensure inputs are numpy arrays
     source_points = np.array(source_points)
     target_points = np.array(target_points)
@@ -172,23 +172,23 @@ def compute_rigid_transform(source_points, target_points):
     centroid_src = np.mean(source_points, axis=0)
     centroid_tgt = np.mean(target_points, axis=0)
 
-    # Center the point clouds
-    src_centered = source_points - centroid_src
-    tgt_centered = target_points - centroid_tgt
+    if enable_R:
+        # Center the point clouds
+        src_centered = source_points - centroid_src
+        tgt_centered = target_points - centroid_tgt
 
-    # Compute the covariance matrix
-    H = np.dot(src_centered.T, tgt_centered)
+        # Compute the covariance matrix
+        H = np.dot(src_centered.T, tgt_centered)
 
-    # Perform Singular Value Decomposition
-    from scipy.linalg import svd
-    U, _, Vt = svd(H)
-    R = np.dot(Vt.T, U.T)
-
-
-
+        # Perform Singular Value Decomposition
+        from scipy.linalg import svd
+        U, _, Vt = svd(H)
+        R = np.dot(Vt.T, U.T)
+    else:
+        R = np.eye(3)
     # Compute the translation vector
     t = centroid_tgt - np.dot(R, centroid_src)
-
+    t[2] = 0
     return R, t
 
 

@@ -1,8 +1,6 @@
 from follow_aruco import *
 from utils.lightglue_util import MyGlue
 
-def compute_centroid(points):
-    return np.mean(points, axis=0)
 
 if __name__=="__main__":
     rospy.init_node('follow_aruco')
@@ -12,9 +10,10 @@ if __name__=="__main__":
 
     robot = init_robot()
 
-    glue = MyGlue(match_type="Aruco") # Aruco LightGlue
+    glue = MyGlue(match_type="LightGlue") # Aruco LightGlue
     goal_frame = None
 
+    src_pts = None
     while not rospy.is_shutdown():
         frame = image_saver.rgb_image
         show_frame = frame.copy() # in case of frame is ruined by painting frame
@@ -43,19 +42,22 @@ if __name__=="__main__":
             pose = robot.step(action=action, wait=False)
             print('robot pose', np.round(pose[:3], 3))
 
-        if key == ord('m'):
-            src_pts, dst_pts = glue.match(frame, goal_frame)
-            
+        if key == ord('m'):      
+
             src_pts_3d, dst_pts_3d = glue.map_3d_pts(src_pts, dst_pts, depth, goal_depth, intrinsics)
+            print("src_pts_3d", src_pts_3d.shape)
+            print(src_pts_3d)
+            
+            print("dst_pts_3d")
+            print(dst_pts_3d)
+            # for lightglue
+            R, t = compute_rigid_transform(src_pts_3d, dst_pts_3d, enable_R=False)
+            move = t
 
-            centroid_src = compute_centroid(src_pts_3d)
-            centroid_dst = compute_centroid(dst_pts_3d)
-
-            move = centroid_dst - centroid_src       
             move = SE3([move[1], move[0], move[2]])
             move.printline()
             
-            robot.step(action=move, wait=False)
+            # robot.step(action=move, wait=False)
 
         if key == ord('g'):
             # setup goal

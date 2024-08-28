@@ -10,6 +10,7 @@ from follow_aruco import *
 from ros_utils.myImageSaver import MyImageSaver
 from ros_utils.myRTABMap import RTABMapPoseListener
 from ik_step import *
+import os
 
 '''
 after run reset.py 

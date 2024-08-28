@@ -1,8 +1,21 @@
 
+
 import cv2
 import numpy as np
 from utils.lightglue_util import MyGlue, replace_rgb_to_depth, load_intrinsics, print_array
 import matplotlib.pyplot as plt
+
+
+import numpy as np
+import roboticstoolbox as rtb
+from utils.pose_util import *
+from spatialmath import SE3, SO3
+from myIK import MyIK
+import rospy
+from std_msgs.msg import Float32
+import cv2
+from follow_aruco import *
+from ros_utils.myRobotNs import MyRobotNs
 
 def plot_matching(image0, image1, pts0, pts1):
     """Plot matching keypoints between two images."""
@@ -47,6 +60,9 @@ if __name__=="__main__":
     intrinsics = load_intrinsics("slam_data/intrinsics_d435.json")
     R, t = glue.match_3d(pts0, pts1, depth1, depth2, intrinsics)
     print(R, t)
+
+
     cv2.imshow('show_frame', show_frame)
     # Exit on 'q' key press
     key = cv2.waitKey(0)
+

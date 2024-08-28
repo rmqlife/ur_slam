@@ -5,6 +5,7 @@ import cv2
 # from replay_aruco_poses import *
 from std_msgs.msg import Float32
 from ik_step import *
+import os
 
 def get_aruco_poses(corners, ids, intrinsics):
     # make sure the aruco's orientation in the camera view! 
@@ -19,6 +20,7 @@ def get_aruco_poses(corners, ids, intrinsics):
 
 def get_cam_pose(frame, intrinsics):
     corners, ids = detect_aruco(frame, draw_flag=True)# 
+    print('get cam ids',ids)
     poses_dict = get_aruco_poses(corners=corners, ids=ids, intrinsics=intrinsics)
     id = 0
     current_cam = None
@@ -37,9 +39,10 @@ def get_marker_pose(frame, id=0, draw=True):
         for i, c in zip(ids, corners):
             if i == id:
                 # exchange x, y axis
-                transform = SE3([[0,1,0,0],[1,0,0,0],[0,0,1,0],[0,0,0,1]])
+                # transform = SE3([[0,1,0,0],[1,0,0,0],[0,0,1,0],[0,0,0,1]])
                 pose = pose_to_SE3(poses_dict[id])
-                pose = transform * pose
+                # pose = transform * pose
+                
                 return pose, c
     
     return None, None
@@ -50,25 +53,42 @@ if __name__=="__main__":
     image_saver = MyImageSaver()
     rospy.sleep(1)
     framedelay = 1000//20
-
-    robot = init_robot()
+    intrinsics = load_intrinsics("slam_data/intrinsics_d435.json")
+    robot = init_robot("robot2")
+    robot_without_basetransformation = MyIK()
     goal_pose = None
     goal_corner = None
+    robot_poses = []
+    marker_poses = []# in frame of aruco marker
+    home = image_saver.folder_path
+
     while not rospy.is_shutdown():
         frame = image_saver.rgb_image
+        
         marker_pose, corner = get_marker_pose(frame, 0)
-
+        
         if goal_corner is not None and corner is not None:
             for (x1, y1), (x2, y2) in zip(corner, goal_corner):
                 cv2.line(frame, (int(x1), int(y1)), (int(x2), int(y2)), (255,255,0), 2)
+
+
 
         cv2.imshow('Camera', frame)
         # Exit on 'q' key press
         key = cv2.waitKey(framedelay) & 0xFF 
         if key == ord('q'):
+
             break
         if key == ord('s'):
-            image_saver.record()
+            if marker_pose != None:
+                joints = robot.get_joints()
+                robot_pose = robot_without_basetransformation.fk(joints)
+                robot_poses.append(robot_pose)
+                marker_poses.append(SE3_to_pose(marker_pose))
+                image_saver.record()
+            else:
+                print("cannot detect id 0")
+
 
         elif key in key_map:
             code  = key_map[key]
@@ -93,4 +113,6 @@ if __name__=="__main__":
                 goal_pose.printline()
             else:
                 print('no valid marker pose')
+    np.save(os.path.join(home,  'robot_poses'), robot_poses)
+    np.save(os.path.join(home,  'marker_poses'), marker_poses)
     cv2.destroyAllWindows()

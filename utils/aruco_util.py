@@ -9,12 +9,12 @@ ARUCO_DICT_NAME = aruco.DICT_4X4_50
 my_aruco_dict = cv2.aruco.getPredefinedDictionary(ARUCO_DICT_NAME)
 
 # Function to detect ArUco markers
+
 def detect_aruco(image, draw_flag=False):
     # Convert the image to grayscale
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     detector = aruco.ArucoDetector(my_aruco_dict, aruco.DetectorParameters())
     corners, ids, rejectedImgPoints = detector.detectMarkers(gray)
-
     if corners is  None or ids is None:
         return corners, ids
     else:
@@ -23,7 +23,22 @@ def detect_aruco(image, draw_flag=False):
             image = aruco.drawDetectedMarkers(image, corners, ids)
         corners = [c[0] for c in corners]
         ids = [c[0] for c in ids]
-    return corners, ids
+        return corners, ids
+    
+def draw_marker_frames(image, corners, poses, intrinsics, marker_size):
+    for i, (corner, (R, tvec)) in enumerate(zip(corners, poses)):
+        if R is not None:
+            # Define the 3D axes
+            axis = np.float32([[0, 0, 0], [0, marker_size, 0], [marker_size, marker_size, 0], [marker_size, 0, 0]]).reshape(-1, 3)
+            # Project 3D points to 2D image plane
+            axis_img, _ = cv2.projectPoints(axis, R, tvec, intrinsics, np.zeros((5, 1)))
+            axis_img = axis_img.reshape(-1, 2)
+            corner = np.int32(corner).reshape(-1, 2)
+            # Draw the marker's axis
+            image = cv2.drawContours(image, [np.int32(axis_img)], -1, (0, 255, 0), 2)
+            image = cv2.polylines(image, [np.int32(axis_img[:2])], False, (0, 0, 255), 2)  # Draw lines
+
+    return image
 
 
 # Function to generate ArUco markers
@@ -56,13 +71,14 @@ def estimate_markers_poses(corners, marker_size, intrinsics):
 
     poses = []
     for c in corners:
-        ret, rvec, tvec = cv2.solvePnP(marker_points, c, mtx, distortion, False, cv2.SOLVEPNP_ITERATIVE)
-        # visualize
-        # print('pnp res', (ret, rvec, tvec))
-        tvec = tvec.reshape((3))
-        R = cv2.Rodrigues(rvec)[0]
-        pose = Rt_to_pose(R, tvec)
-        poses.append(pose)
+        ret, rvec, tvec = cv2.solvePnP(marker_points, c, mtx, distortion, False, cv2.SOLVEPNP_EPNP)
+        if ret:
+            tvec = tvec.reshape((3,))
+            R, _ = cv2.Rodrigues(rvec)
+            pose = Rt_to_pose(R, tvec)  # Ensure Rt_to_pose is correctly implemented
+            poses.append(pose)
+        else:
+            print("Pose estimation failed for one of the markers")
     return poses
 
 

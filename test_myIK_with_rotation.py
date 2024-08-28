@@ -2,10 +2,10 @@ from ik_step import *
 from utils.pose_zoo import circle_pose
 
 if __name__=="__main__":
-    dry_run = False
+    dry_run = True
 
     rospy.init_node('ik_step', anonymous=True)
-    robot = init_robot()   
+    robot = init_robot(ns='robot1')   
 
     init_pose = robot.get_pose()
     target_pose = init_pose.copy()
