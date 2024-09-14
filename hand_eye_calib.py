@@ -124,7 +124,7 @@ def compute_model(data_dir):
 
 
 if __name__ == "__main__":
-    data_dir = 'data/images-20240820-140928'
+    data_dir = 'data/images-20240905-144732'
 
     myHandEye = compute_model(data_dir=data_dir)
     T_t2b = myHandEye.compute_t2b()

@@ -188,7 +188,6 @@ def compute_rigid_transform(source_points, target_points, enable_R=True):
         R = np.eye(3)
     # Compute the translation vector
     t = centroid_tgt - np.dot(R, centroid_src)
-    t[2] = 0
     return R, t
 
 

@@ -31,7 +31,7 @@ pose:
 
 if __name__ == "__main__":
     rospy.init_node('ik_step', anonymous=True)
-    robot = init_robot("robot2")
+    robot = init_robot("robot1")
     robot2 = MyIK() 
     image_saver = MyImageSaver()
     intrinsics = load_intrinsics("slam_data/intrinsics_d435.json")

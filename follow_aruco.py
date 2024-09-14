@@ -4,7 +4,6 @@ import rospy
 import cv2
 # from replay_aruco_poses import *
 from std_msgs.msg import Float32
-from ik_step import *
 
 def get_aruco_poses(corners, ids, intrinsics):
     # make sure the aruco's orientation in the camera view! 

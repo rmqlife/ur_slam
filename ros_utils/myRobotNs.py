@@ -3,6 +3,8 @@ import rospy
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from control_msgs.msg import JointTrajectoryControllerState
 import numpy as np
+from ruckig import InputParameter, OutputParameter, Result, Ruckig
+import copy
 
 class MyRobotNs:  # Inherit from MyBag
     def __init__(self,ns="robot1"):
@@ -10,7 +12,7 @@ class MyRobotNs:  # Inherit from MyBag
         ns : name space , String
         '''
         self.topic = '/'+ns+'/scaled_pos_joint_traj_controller/state'  # Define the topic for reading joint states
-
+        
         # Create a subscriber to the '/joint_states' topic
         self.robot_joint_subscriber = rospy.Subscriber(self.topic, JointTrajectoryControllerState, self.subscriber_callback)
         pub_topic = '/'+ns+'/scaled_pos_joint_traj_controller/command'
@@ -25,6 +27,9 @@ class MyRobotNs:  # Inherit from MyBag
     def subscriber_callback(self, data):
         self.joint_positions = np.array(data.actual.positions)
         self.joint_names = data.joint_names
+        self.velocity = np.array(data.actual.velocities)
+        self.acceleration = np.array(data.actual.accelerations)
+
 
     def get_joints(self):
         return self.joint_positions
@@ -33,7 +38,6 @@ class MyRobotNs:  # Inherit from MyBag
     def move_joints_smooth(self, joints, coef=3, wait=False):
         joints_movement = np.max(np.abs(joints - self.get_joints()))
         return self.move_joints(joints, duration=coef*joints_movement, wait=wait)
-
 
     def move_joints(self, joint_positions, duration=0.1, wait=True):
         # Create a JointTrajectory message
@@ -67,3 +71,4 @@ class MyRobotNs:  # Inherit from MyBag
 
 
 
+    

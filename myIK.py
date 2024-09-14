@@ -36,6 +36,19 @@ class MyIK:
     def ik(self, pose, q):
         return self.ik_se3(pose_to_SE3(pose), q)
     
+    def ik_point(self,point, q):
+        '''
+        given end effector position, find the joint configuration
+
+        '''
+        current_se3 = self.robot_plan.fkine(q)
+        current_se3.t = [0,0,0]
+        desired_pose = SE3(point) @ SE3(current_se3)
+
+        return  self.robot_plan.ikine_LM(desired_pose, q0=q).q
+        
+
+
     def fk_se3(self, joints):
         return self.robot_plan.fkine(joints)
 

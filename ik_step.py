@@ -8,8 +8,8 @@ from std_msgs.msg import Float32
 import cv2
 from follow_aruco import *
 from ros_utils.myRobotNs import MyRobotNs
-
-intrinsics = load_intrinsics("slam_data/intrinsics_d435.json")
+from ros_utils.myGripper import MyGripper
+intrinsics = load_intrinsics("/home/rmqlife/work/ur_slam/slam_data/intrinsics_d435.json")
 
 key_map = {
     ord('!'): -1,  # Shift+1
@@ -27,7 +27,7 @@ key_map = {
 }
 
 
-def lookup_action(code, t_move=0.03, r_move=5):
+def lookup_action(code, t_move=0.02, r_move=5):
     if abs(code)<=3:
         movement = t_move * np.sign(code)
     else:
@@ -59,6 +59,12 @@ class MyIK_rotate(MyIK):
     def ik_se3(self, pose, q):
         pose = self.transform.inv() * pose
         return super().ik_se3(pose, q)
+    
+    def ik_point(self,point,q):
+        point_robot = self.transform.inv() @ point
+        return super().ik_point(point_robot.t,q)
+
+
 
 class MySubscriber:
     def __init__(self, topic_name, topic_type):
@@ -80,6 +86,7 @@ class MySubscriber:
 class MyRobot_with_IK(MyRobotNs):
     def __init__(self,myIK,ns):
         self.myIK = myIK
+        self.shouldMove = False
         super().__init__(ns)
 
     def step(self, action, wait):
@@ -89,7 +96,6 @@ class MyRobot_with_IK(MyRobotNs):
         # if np.linalg.norm(action.t)<0.001:
         #     # rotation keep the x, y, z
         pose_se3_new.t = pose_se3.t + action.t
-        
         return self.goto_pose(pose_se3_new, wait)
 
     def get_pose(self):
@@ -122,18 +128,20 @@ class MyRobot_with_IK(MyRobotNs):
                 super().move_joints(joints_star, duration=coef*joints_movement, wait=True)
 
 
-def init_robot(ns='robot1'):
+def init_robot(ns='robot1', pose_path='/home/rmqlife/work/ur_slam/pose.json'):
     '''
     ns : robot topic name space
     '''
-
+    transforms = [SE3.Rx(135, unit='deg'), SE3.Rx(45,unit="deg")]
+    with open(pose_path, 'r') as file:
+        data = json.load(file)
+        arm_poses = [data['arm1_pose'], data['arm2_pose']]
+        transforms = [pose_to_SE3(arm_poses[0]), pose_to_SE3(arm_poses[1])]
     # from hand_eye_calib import load_object
     if ns == "robot1":
-        base_transform_100 = SE3.Rx(135, unit='deg')
-        myIK = MyIK_rotate(base_transform_100)
+        myIK = MyIK_rotate(transforms[0])
     elif ns == "robot2":
-        base_transform_200 = SE3.Rx(45,unit="deg")
-        myIK = MyIK_rotate(base_transform_200)
+        myIK = MyIK_rotate(transforms[1])
     else:
         raise KeyError
     # base_transform = load_object("slam_data/images-20240731-100429/base_transform.pkl")
@@ -148,6 +156,9 @@ if __name__ == "__main__":
     robot = init_robot(ns='robot1')
     print(robot.get_joints())
     
+    gripper = MyGripper()
+
+
     while not rospy.is_shutdown():
         frame = image_saver.rgb_image
         cam_pose = get_cam_pose(frame, intrinsics)
@@ -155,6 +166,11 @@ if __name__ == "__main__":
         key = cv2.waitKey(framedelay) & 0xFF 
         if key == ord('q'):
             break
+        if key == ord('k'):
+            gripper.set_gripper(position=1000, force=2)
+        if key == ord('j'):
+            gripper.set_gripper(position=200, force=2)
+
         elif key in key_map:
             code  = key_map[key]
             print(f"action {code}")
@@ -164,11 +180,5 @@ if __name__ == "__main__":
             if cam_pose is not None:
                 print("cam pose", np.round(cam_pose[:3], 3))
             image_saver.record()
-        # i += 1
-        # # build action
-        # # test actions
-        # code = 4
-        # act_by_code(robot, action_code=code)
-        # print(f"action {code}")
 
         

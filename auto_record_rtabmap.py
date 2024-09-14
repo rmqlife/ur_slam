@@ -21,7 +21,8 @@ def configs_to_traj(config_path, vel_threshold):
     joints = []
     poses = []
     myIK = MyIK()
-    for k in ['q1','q2','q3','q4','q1']:#for robot1
+    # for k in ['q1','q2','q3','q4','q1']:#for robot1
+    for k in ["facedown"]:
     # for k in ['k1','k2','k3','k4','k5','k6','k1']:#for robot2
         j = joint_configs.get(k)
         print(j)
